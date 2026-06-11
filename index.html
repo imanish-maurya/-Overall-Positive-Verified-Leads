@@ -425,8 +425,10 @@ function resetAll(){
   ['Err','Ok','Warn'].forEach(t=>{document.getElementById('alert'+t).classList.remove('show');});
   document.getElementById('tblWrap').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><p>Upload an Excel file to view filtered leads</p><span>Positive Prospects, Site Visit Done, Booking Done & more will appear here</span></div>';
   allRows=[]; filteredData=[]; fileHeaders=[];
+  document.getElementById('campId').value='';
   document.getElementById('agentName').value='';
   TAB='';
+  localStorage.removeItem('selectedAgent');
   const badge=document.getElementById('topbarBadge');
   badge.textContent='Tab: — Select Name —';
   badge.style.background='';
@@ -476,12 +478,28 @@ function onAgentChange(){
     badge.textContent = 'Tab: ' + TAB;
     badge.style.background = 'rgba(46,158,91,0.25)';
     badge.style.borderColor = 'rgba(46,158,91,0.4)';
+    localStorage.setItem('selectedAgent', TAB);
   } else {
     badge.textContent = 'Tab: — Select Name —';
     badge.style.background = '';
     badge.style.borderColor = '';
+    localStorage.removeItem('selectedAgent');
   }
   reprocess();
+}
+
+// Restore saved name on page load
+function restoreSavedAgent(){
+  const saved = localStorage.getItem('selectedAgent');
+  if(saved){
+    const sel = document.getElementById('agentName');
+    sel.value = saved;
+    TAB = saved;
+    const badge = document.getElementById('topbarBadge');
+    badge.textContent = 'Tab: ' + saved;
+    badge.style.background = 'rgba(46,158,91,0.25)';
+    badge.style.borderColor = 'rgba(46,158,91,0.4)';
+  }
 }
 
 async function submitToSheets(){
@@ -509,7 +527,8 @@ async function submitToSheets(){
     // Small delay then show success
     setTimeout(()=>{
       showSuccess(filteredData.length);
-      // Auto-clear file after successful submit
+      // Auto-clear file and Campaign ID after successful submit
+      document.getElementById('campId').value='';
       document.getElementById('fileInput').value='';
       document.getElementById('uploadTxt').textContent='Click to select file';
       document.getElementById('uploadFname').textContent='';
@@ -528,6 +547,8 @@ async function submitToSheets(){
     showAlert('Err','Submit failed: '+err.message);
   }
 }
+
+window.addEventListener('DOMContentLoaded', restoreSavedAgent);
 </script>
 
 </body>
