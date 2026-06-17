@@ -135,7 +135,7 @@
   <span style="font-family:'Calibri',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.2px;white-space:nowrap">Overall Positive &amp; Verified Leads Dashboard</span>
   <div style="margin-left:auto;display:flex;align-items:center;gap:12px;flex-shrink:0">
     <div class="topbar-badge" id="topbarBadge">Tab: — Select Name —</div>
-    <span style="font-family:'Calibri',sans-serif;font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;white-space:nowrap">Made by Manish Maurya</span>
+    <span style="font-family:'Calibri',sans-serif;font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;white-space:nowrap"><strong>⚡ Developed by - Manish Maurya</strong></span>
   </div>
 </div>
 
@@ -201,8 +201,10 @@
 
   <div class="stats-action-row">
     <div class="stats-group">
-      <div class="stat-card blue"><div class="stat-card-label">Total Rows</div><div class="stat-card-val" id="sTotal">—</div></div>
-      <div class="stat-card green"><div class="stat-card-label">Positive Leads</div><div class="stat-card-val" id="sFiltered">—</div></div>
+      <div class="stat-card blue"><div class="stat-card-label">Total Rows in File</div><div class="stat-card-val" id="sTotal">—</div></div>
+      <div class="stat-card green"><div class="stat-card-label">Total Filtered Leads</div><div class="stat-card-val" id="sFiltered">—</div></div>
+      <div class="stat-card green" style="--after-bg:#2e9e5b"><div class="stat-card-label">Positive Remarks</div><div class="stat-card-val" id="sPositive" style="color:#2e9e5b">—</div></div>
+      <div class="stat-card blue" style=""><div class="stat-card-label">Verified Only</div><div class="stat-card-val" id="sVerified" style="color:#185FA5">—</div></div>
       <div class="stat-card amber"><div class="stat-card-label">Data Upto (Day-1)</div><div class="stat-card-val" id="sCutoff">—</div></div>
     </div>
   </div>
@@ -337,9 +339,18 @@ function processData(){
   document.getElementById('sCutoff').textContent=fmtCutoffDisplay();
   const remarkCol=mapHeader('Final Remarks')||'Final Remarks';
   const dateCol=mapHeader('created_at_time')||'created_at_time';
+  const callVerCol=mapHeader('Call Verified')||'Call Verified';
+  const rechurnVerCol=mapHeader('Rechurn Verified')||'Rechurn Verified';
+
   let out=allRows.filter(row=>{
     const r=String(row[remarkCol]||'').trim().toLowerCase();
-    return POSITIVE.some(p=>r===p);
+    const isPositiveRemark=POSITIVE.some(p=>r===p);
+
+    const callVer=String(row[callVerCol]||'').trim().toLowerCase();
+    const rechurnVer=String(row[rechurnVerCol]||'').trim().toLowerCase();
+    const isVerified=(callVer==='yes'||rechurnVer==='yes');
+
+    return isPositiveRemark||isVerified;
   });
   if(cutoffYMD){
     out=out.filter(row=>{
@@ -362,7 +373,18 @@ function processData(){
     });
     return mapped;
   });
+  // Count breakdown
+  const callVerCol2=mapHeader('Call Verified')||'Call Verified';
+  const rechurnVerCol2=mapHeader('Rechurn Verified')||'Rechurn Verified';
+  const positiveCount=filteredData.filter(row=>{
+    const r=String(row['Final Remarks']||'').trim().toLowerCase();
+    return POSITIVE.some(p=>r===p);
+  }).length;
+  const verifiedOnlyCount=filteredData.length-positiveCount;
+
   document.getElementById('sFiltered').textContent=filteredData.length;
+  document.getElementById('sPositive').textContent=positiveCount;
+  document.getElementById('sVerified').textContent=verifiedOnlyCount;
   document.getElementById('tblCount').textContent=filteredData.length+' records';
   document.getElementById('submitBtn').disabled=filteredData.length===0||!TAB;
   renderTable();
