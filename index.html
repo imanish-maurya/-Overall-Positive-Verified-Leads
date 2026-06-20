@@ -786,11 +786,10 @@ const ALLOWED_DOMAIN = 'aurumanalytica.in';
 // ── Admin Emails — sabhi ko Insights tab dikhega ──────────────────────────
 const ADMIN_EMAILS = [
   'manish.maurya@aurumanalytica.in',
-'beena.k@aurumanalytica.in',
-'deepak.singh@aurumanalytica.in',
-
+  'beena.k@aurumanalytica.in',
+  'deepak.singh@aurumanalytica.in',
 ];
-const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
+const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
 
 // ── Aurum OTP Server URL ──────────────────────────────────────────────────
 // Local testing: 'http://localhost:3000'
@@ -953,19 +952,29 @@ function launchDashboard(email, isAdmin) {
   // Show logged-in user in topbar
   const badge = document.getElementById('topbarBadge');
   if (badge) {
+    // Email se display name banao: manish.maurya → Manish Maurya
+    const localPart = email.split('@')[0];
+    const displayName = localPart
+      .split('.')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    const nameBadge = '<span style="background:rgba(24,95,165,0.3);border:1px solid rgba(24,95,165,0.6);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">👤 ' + displayName + '</span>';
+    const adminBadge = '<span style="background:rgba(200,165,18,0.25);border:1px solid rgba(200,165,18,0.55);color:#f5d560;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">👑 Admin</span>';
+
     if (isAdmin) {
-      // Admin: gold crown chip
-      badge.innerHTML = '👑 Admin';
-      badge.style.background = 'rgba(200,165,18,0.25)';
-      badge.style.borderColor = 'rgba(200,165,18,0.55)';
-      badge.style.color = '#f5d560';
+      badge.innerHTML = nameBadge + ' ' + adminBadge;
     } else {
-      // Normal user: show email as chip
-      badge.innerHTML = '👤 ' + email;
-      badge.style.background = 'rgba(24,95,165,0.25)';
-      badge.style.borderColor = 'rgba(24,95,165,0.55)';
-      badge.style.color = '#fff';
+      badge.innerHTML = nameBadge;
     }
+    // Reset outer badge styling (chips handle their own styles)
+    badge.style.background = 'transparent';
+    badge.style.border = 'none';
+    badge.style.padding = '0';
+    badge.style.display = 'flex';
+    badge.style.alignItems = 'center';
+    badge.style.gap = '6px';
+    badge.style.color = '';
   }
   
   // Restore saved agent name (skip for admin, they view all)
