@@ -441,6 +441,8 @@ function resetAll(){
   document.getElementById('sheetInfo').classList.remove('show');
   document.getElementById('sTotal').textContent='—';
   document.getElementById('sFiltered').textContent='—';
+  document.getElementById('sPositive').textContent='—';
+  document.getElementById('sVerified').textContent='—';
   document.getElementById('sCutoff').textContent='—';
   document.getElementById('tblCount').textContent='0 records';
   document.getElementById('submitBtn').disabled=true;
@@ -560,6 +562,8 @@ async function submitToSheets(){
       allRows=[]; filteredData=[]; fileHeaders=[];
       document.getElementById('sTotal').textContent='—';
       document.getElementById('sFiltered').textContent='—';
+      document.getElementById('sPositive').textContent='—';
+      document.getElementById('sVerified').textContent='—';
       document.getElementById('tblCount').textContent='0 records';
       document.getElementById('submitBtn').disabled=true;
       document.getElementById('tblWrap').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><p>Upload an Excel file to view filtered leads</p><span>Positive Prospects, Site Visit Done, Booking Done & more will appear here</span></div>';
