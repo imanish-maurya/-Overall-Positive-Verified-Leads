@@ -929,10 +929,15 @@ async function verifyOTP() {
   }
 }
 
+// ── Central activity tracking (Google Sheets) ──────────────────────────────
+const ACTIVITY_SHEET_URL = OTP_SERVER_URL; // same Apps Script handles activity too
+
 function trackActivity(email, action) {
   try {
-    if (!email || !email.trim()) return; // Guard: ignore empty/blank email
+    if (!email || !email.trim()) return;
     email = email.trim().toLowerCase();
+
+    // 1. LocalStorage (fast local cache)
     const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
     const data = JSON.parse(localStorage.getItem(key) || '{"logins":0,"uploads":0,"submits":0,"lastActive":null}');
     if (action === 'login') data.logins++;
@@ -940,13 +945,35 @@ function trackActivity(email, action) {
     if (action === 'submit') data.submits++;
     data.lastActive = new Date().toISOString();
     localStorage.setItem(key, JSON.stringify(data));
-    
-    // Also maintain user list (filter out any blank entries)
+
     const users = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
     const cleanUsers = users.filter(u => u && u.trim());
-    if (!cleanUsers.includes(email)) { cleanUsers.push(email); }
+    if (!cleanUsers.includes(email)) cleanUsers.push(email);
     localStorage.setItem('aurumUsers', JSON.stringify(cleanUsers));
+
+    // 2. Google Sheets (central — visible to admin from any device)
+    fetch(ACTIVITY_SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'track-activity',
+        email: email,
+        event: action,
+        timestamp: new Date().toISOString()
+      })
+    }).catch(() => {}); // silent fail — don't block UI
   } catch(e) {}
+}
+
+// Fetch activity data from Google Sheets for admin insights
+async function fetchCentralActivity() {
+  try {
+    const res = await fetch(ACTIVITY_SHEET_URL + '?action=get-activity', { method: 'GET' });
+    const data = await res.json();
+    if (data && data.users) return data.users; // [{email, logins, uploads, submits, lastActive}]
+  } catch(e) {}
+  return null;
 }
 
 function launchDashboard(email, isAdmin) {
@@ -1020,58 +1047,65 @@ function switchTab(tab) {
 }
 
 // Admin: load insights from localStorage
-function loadInsights() {
+function renderInsightsTable(rows) {
+  let totalLogins = 0, totalUploads = 0, totalSubmits = 0;
+  rows.forEach(r => { totalLogins += r.logins; totalUploads += r.uploads; totalSubmits += r.submits; });
+
+  document.getElementById('insightsSummary').innerHTML = `
+    <div class="insight-card"><div class="insight-label">Total Users</div><div class="insight-val">${rows.length}</div></div>
+    <div class="insight-card green"><div class="insight-label">Total Logins</div><div class="insight-val">${totalLogins}</div></div>
+    <div class="insight-card"><div class="insight-label">Files Uploaded</div><div class="insight-val">${totalUploads}</div></div>
+    <div class="insight-card amber"><div class="insight-label">Sheets Submitted</div><div class="insight-val">${totalSubmits}</div></div>
+  `;
+
+  if (rows.length === 0) {
+    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
+    return;
+  }
+
+  rows.sort((a,b) => (b.logins+b.uploads+b.submits) - (a.logins+a.uploads+a.submits));
+
+  document.getElementById('insightsTableBody').innerHTML = rows.map(r => {
+    const total = r.logins + r.uploads + r.submits;
+    const level = total >= 10 ? 'high' : total >= 3 ? 'mid' : 'low';
+    const levelTxt = total >= 10 ? 'High' : total >= 3 ? 'Medium' : 'Low';
+    const last = r.lastActive ? new Date(r.lastActive).toLocaleString('en-IN') : '—';
+    const safeEmail = r.email.replace(/"/g, '&quot;');
+    return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="del-checkbox row-chk" data-email="${safeEmail}" onchange="onRowCheck()"></td>
+      <td style="font-weight:600">${r.email}</td>
+      <td>${r.logins}</td>
+      <td>${r.uploads}</td>
+      <td>${r.submits}</td>
+      <td style="font-size:12px;color:#6b7a9a">${last}</td>
+      <td><span class="activity-badge ${level}">${levelTxt}</span></td>
+    </tr>`;
+  }).join('');
+  clearSelection();
+}
+
+async function loadInsights() {
+  // Show loading state
+  document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">⏳ Loading from server...</td></tr>';
+
+  // Try Google Sheets first (central data — all users from all devices)
+  const centralRows = await fetchCentralActivity();
+  if (centralRows && centralRows.length >= 0) {
+    renderInsightsTable(centralRows);
+    return;
+  }
+
+  // Fallback: localStorage (only current browser's data)
   try {
     const rawUsers = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
     const users = rawUsers.filter(u => u && u.trim());
-    if (users.length !== rawUsers.length) {
-      localStorage.setItem('aurumUsers', JSON.stringify(users));
-    }
-    let totalLogins = 0, totalUploads = 0, totalSubmits = 0;
-    const rows = [];
-
-    users.forEach(email => {
+    if (users.length !== rawUsers.length) localStorage.setItem('aurumUsers', JSON.stringify(users));
+    const rows = users.map(email => {
       const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
       const d = JSON.parse(localStorage.getItem(key) || '{"logins":0,"uploads":0,"submits":0,"lastActive":null}');
-      totalLogins += d.logins;
-      totalUploads += d.uploads;
-      totalSubmits += d.submits;
-      rows.push({ email, ...d });
+      return { email, ...d };
     });
-
-    // Summary cards
-    document.getElementById('insightsSummary').innerHTML = `
-      <div class="insight-card"><div class="insight-label">Total Users</div><div class="insight-val">${users.length}</div></div>
-      <div class="insight-card green"><div class="insight-label">Total Logins</div><div class="insight-val">${totalLogins}</div></div>
-      <div class="insight-card"><div class="insight-label">Files Uploaded</div><div class="insight-val">${totalUploads}</div></div>
-      <div class="insight-card amber"><div class="insight-label">Sheets Submitted</div><div class="insight-val">${totalSubmits}</div></div>
-    `;
-
-    if (rows.length === 0) {
-      document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
-      return;
-    }
-
-    rows.sort((a,b) => (b.logins+b.uploads+b.submits) - (a.logins+a.uploads+a.submits));
-
-    document.getElementById('insightsTableBody').innerHTML = rows.map(r => {
-      const total = r.logins + r.uploads + r.submits;
-      const level = total >= 10 ? 'high' : total >= 3 ? 'mid' : 'low';
-      const levelTxt = total >= 10 ? 'High' : total >= 3 ? 'Medium' : 'Low';
-      const last = r.lastActive ? new Date(r.lastActive).toLocaleString('en-IN') : '—';
-      const safeEmail = r.email.replace(/"/g, '&quot;');
-      return `<tr>
-        <td style="text-align:center"><input type="checkbox" class="del-checkbox row-chk" data-email="${safeEmail}" onchange="onRowCheck()"></td>
-        <td style="font-weight:600">${r.email}</td>
-        <td>${r.logins}</td>
-        <td>${r.uploads}</td>
-        <td>${r.submits}</td>
-        <td style="font-size:12px;color:#6b7a9a">${last}</td>
-        <td><span class="activity-badge ${level}">${levelTxt}</span></td>
-      </tr>`;
-    }).join('');
-
-    clearSelection();
+    renderInsightsTable(rows);
   } catch(e) {
     document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#c0392b">Error loading insights.</td></tr>';
   }
@@ -1114,16 +1148,22 @@ function deleteSelected() {
   const names = emailsToDelete.map(e => e.split('@')[0]).join(', ');
   if (!confirm('Delete history for: ' + names + '?\n\nThey can still login and new activity will be tracked fresh.')) return;
 
-  // Remove activity data from localStorage
+  // 1. Remove from localStorage
   emailsToDelete.forEach(email => {
     const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
     localStorage.removeItem(key);
   });
-
-  // Remove from aurumUsers list
   const users = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
   const updated = users.filter(u => !emailsToDelete.includes(u));
   localStorage.setItem('aurumUsers', JSON.stringify(updated));
+
+  // 2. Delete from Google Sheets (central)
+  fetch(ACTIVITY_SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'delete-activity', emails: emailsToDelete })
+  }).catch(() => {});
 
   loadInsights();
 }
