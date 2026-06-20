@@ -783,8 +783,14 @@
 <script>
 // ============ AURUM AUTH SYSTEM ============
 const ALLOWED_DOMAIN = 'aurumanalytica.in';
-const ADMIN_EMAIL = 'manish.maurya@aurumanalytica.in';
-const ADMIN_PASS = 'AurumAdmin@2024'; // Only admin has a password bypass
+// ── Admin Emails — sabhi ko Insights tab dikhega ──────────────────────────
+const ADMIN_EMAILS = [
+  'manish.maurya@aurumanalytica.in',
+ 'deepak.singh@aurumanalytica.in'
+  // '3rd.admin@aurumanalytica.in',
+
+];
+const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
 
 // ── Aurum OTP Server URL ──────────────────────────────────────────────────
 // Local testing: 'http://localhost:3000'
@@ -893,7 +899,7 @@ async function verifyOTP() {
 
     if (data.success) {
       clearInterval(timerInterval);
-      const isAdmin = (currentEmail === ADMIN_EMAIL);
+      const isAdmin = ADMIN_EMAILS.includes(currentEmail);
       localStorage.setItem('aurumLoggedIn', '1');
       localStorage.setItem('aurumUser', currentEmail);
       localStorage.setItem('aurumRole', isAdmin ? 'admin' : 'user');
