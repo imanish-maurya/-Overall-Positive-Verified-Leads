@@ -912,6 +912,8 @@ async function verifyOTP() {
 
 function trackActivity(email, action) {
   try {
+    if (!email || !email.trim()) return; // Guard: ignore empty/blank email
+    email = email.trim().toLowerCase();
     const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
     const data = JSON.parse(localStorage.getItem(key) || '{"logins":0,"uploads":0,"submits":0,"lastActive":null}');
     if (action === 'login') data.logins++;
@@ -920,9 +922,11 @@ function trackActivity(email, action) {
     data.lastActive = new Date().toISOString();
     localStorage.setItem(key, JSON.stringify(data));
     
-    // Also maintain user list
+    // Also maintain user list (filter out any blank entries)
     const users = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
-    if (!users.includes(email)) { users.push(email); localStorage.setItem('aurumUsers', JSON.stringify(users)); }
+    const cleanUsers = users.filter(u => u && u.trim());
+    if (!cleanUsers.includes(email)) { cleanUsers.push(email); }
+    localStorage.setItem('aurumUsers', JSON.stringify(cleanUsers));
   } catch(e) {}
 }
 
@@ -979,7 +983,12 @@ function switchTab(tab) {
 // Admin: load insights from localStorage
 function loadInsights() {
   try {
-    const users = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
+    const rawUsers = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
+    // Clean out any blank/empty/null entries and save back (auto-heal)
+    const users = rawUsers.filter(u => u && u.trim());
+    if (users.length !== rawUsers.length) {
+      localStorage.setItem('aurumUsers', JSON.stringify(users));
+    }
     let totalLogins = 0, totalUploads = 0, totalSubmits = 0;
     const rows = [];
     
