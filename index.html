@@ -1029,22 +1029,12 @@ function loadInsights() {
 
 // ============ CHECK AUTH ON LOAD ============
 window.addEventListener('DOMContentLoaded', function() {
-  // Sirf GitHub Pages live URL pe auto-login allow karo
-  const isLive = window.location.hostname.includes('github.io') || 
-                 window.location.hostname.includes('onrender.com') ||
-                 (window.location.protocol === 'https:' && !window.location.hostname.includes('localhost'));
-
   const loggedIn = localStorage.getItem('aurumLoggedIn');
   const user = localStorage.getItem('aurumUser');
   const role = localStorage.getItem('aurumRole');
-
-  if (isLive && loggedIn && user) {
+  
+  if (loggedIn && user) {
     launchDashboard(user, role === 'admin');
-  } else if (!isLive) {
-    // Local file — session clear karo, fresh login maango
-    localStorage.removeItem('aurumLoggedIn');
-    localStorage.removeItem('aurumUser');
-    localStorage.removeItem('aurumRole');
   }
   
   // Patch handleFile and submitToSheets to track activity
