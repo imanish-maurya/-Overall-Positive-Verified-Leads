@@ -547,6 +547,13 @@
 .activity-badge.high { background: #e6f7ee; color: #1e7a44; border: 1px solid #a8dfc0; }
 .activity-badge.mid { background: #fff3dc; color: #9a5e08; border: 1px solid #f5c97a; }
 .activity-badge.low { background: #e6f1fb; color: #0e4a84; border: 1px solid #93bde8; }
+.del-checkbox { width:16px; height:16px; accent-color:#c0392b; cursor:pointer; }
+.delete-bar { display:none; align-items:center; gap:10px; padding:8px 16px; background:#fdecea; border:1px solid #f5b7b1; border-radius:10px; margin-bottom:10px; }
+.delete-bar.show { display:flex; }
+.delete-bar-txt { font-size:13px; color:#c0392b; font-weight:600; flex:1; }
+.delete-bar-btn { background:#c0392b; color:#fff; border:none; border-radius:8px; padding:6px 16px; font-size:12px; font-weight:700; font-family:'Calibri',sans-serif; cursor:pointer; box-shadow:0 3px 0 #922b21; transition:transform .15s; }
+.delete-bar-btn:hover { transform:translateY(-1px); }
+.delete-bar-cancel { background:transparent; color:#c0392b; border:1px solid #f5b7b1; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; font-family:'Calibri',sans-serif; cursor:pointer; }
 
 /* Dashboard panel */
 #dashboardPanel { display: none; }
@@ -759,9 +766,15 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <div class="user-table-title">Per-User Usage Detail</div>
       </div>
+      <div class="delete-bar" id="deleteBar">
+        <span class="delete-bar-txt" id="deleteBarTxt">0 users selected</span>
+        <button class="delete-bar-cancel" onclick="clearSelection()">Cancel</button>
+        <button class="delete-bar-btn" onclick="deleteSelected()">🗑 Delete History</button>
+      </div>
       <div class="user-table-wrap">
         <table class="user-table">
           <thead><tr>
+            <th style="width:36px"><input type="checkbox" class="del-checkbox" id="selectAllChk" title="Select all" onchange="toggleSelectAll(this)"></th>
             <th>User (Email)</th>
             <th>Total Logins</th>
             <th>Files Uploaded</th>
@@ -1010,14 +1023,13 @@ function switchTab(tab) {
 function loadInsights() {
   try {
     const rawUsers = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
-    // Clean out any blank/empty/null entries and save back (auto-heal)
     const users = rawUsers.filter(u => u && u.trim());
     if (users.length !== rawUsers.length) {
       localStorage.setItem('aurumUsers', JSON.stringify(users));
     }
     let totalLogins = 0, totalUploads = 0, totalSubmits = 0;
     const rows = [];
-    
+
     users.forEach(email => {
       const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
       const d = JSON.parse(localStorage.getItem(key) || '{"logins":0,"uploads":0,"submits":0,"lastActive":null}');
@@ -1026,7 +1038,7 @@ function loadInsights() {
       totalSubmits += d.submits;
       rows.push({ email, ...d });
     });
-    
+
     // Summary cards
     document.getElementById('insightsSummary').innerHTML = `
       <div class="insight-card"><div class="insight-label">Total Users</div><div class="insight-val">${users.length}</div></div>
@@ -1034,21 +1046,22 @@ function loadInsights() {
       <div class="insight-card"><div class="insight-label">Files Uploaded</div><div class="insight-val">${totalUploads}</div></div>
       <div class="insight-card amber"><div class="insight-label">Sheets Submitted</div><div class="insight-val">${totalSubmits}</div></div>
     `;
-    
-    // Table
+
     if (rows.length === 0) {
-      document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
+      document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
       return;
     }
-    
+
     rows.sort((a,b) => (b.logins+b.uploads+b.submits) - (a.logins+a.uploads+a.submits));
-    
+
     document.getElementById('insightsTableBody').innerHTML = rows.map(r => {
       const total = r.logins + r.uploads + r.submits;
       const level = total >= 10 ? 'high' : total >= 3 ? 'mid' : 'low';
       const levelTxt = total >= 10 ? 'High' : total >= 3 ? 'Medium' : 'Low';
       const last = r.lastActive ? new Date(r.lastActive).toLocaleString('en-IN') : '—';
+      const safeEmail = r.email.replace(/"/g, '&quot;');
       return `<tr>
+        <td style="text-align:center"><input type="checkbox" class="del-checkbox row-chk" data-email="${safeEmail}" onchange="onRowCheck()"></td>
         <td style="font-weight:600">${r.email}</td>
         <td>${r.logins}</td>
         <td>${r.uploads}</td>
@@ -1057,9 +1070,62 @@ function loadInsights() {
         <td><span class="activity-badge ${level}">${levelTxt}</span></td>
       </tr>`;
     }).join('');
+
+    clearSelection();
   } catch(e) {
-    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c0392b">Error loading insights.</td></tr>';
+    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#c0392b">Error loading insights.</td></tr>';
   }
+}
+
+function onRowCheck() {
+  const checked = document.querySelectorAll('.row-chk:checked');
+  const all = document.querySelectorAll('.row-chk');
+  const bar = document.getElementById('deleteBar');
+  const txt = document.getElementById('deleteBarTxt');
+  const selAll = document.getElementById('selectAllChk');
+  const n = checked.length;
+  if (n > 0) {
+    bar.classList.add('show');
+    txt.textContent = n + ' user' + (n > 1 ? 's' : '') + ' selected — history will be deleted';
+  } else {
+    bar.classList.remove('show');
+  }
+  selAll.checked = (n === all.length && all.length > 0);
+  selAll.indeterminate = (n > 0 && n < all.length);
+}
+
+function toggleSelectAll(masterChk) {
+  document.querySelectorAll('.row-chk').forEach(chk => chk.checked = masterChk.checked);
+  onRowCheck();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-chk').forEach(chk => chk.checked = false);
+  const selAll = document.getElementById('selectAllChk');
+  if (selAll) { selAll.checked = false; selAll.indeterminate = false; }
+  const bar = document.getElementById('deleteBar');
+  if (bar) bar.classList.remove('show');
+}
+
+function deleteSelected() {
+  const checked = document.querySelectorAll('.row-chk:checked');
+  if (checked.length === 0) return;
+  const emailsToDelete = Array.from(checked).map(chk => chk.dataset.email);
+  const names = emailsToDelete.map(e => e.split('@')[0]).join(', ');
+  if (!confirm('Delete history for: ' + names + '?\n\nThey can still login and new activity will be tracked fresh.')) return;
+
+  // Remove activity data from localStorage
+  emailsToDelete.forEach(email => {
+    const key = 'aurumActivity_' + email.replace(/[^a-z0-9]/gi,'_');
+    localStorage.removeItem(key);
+  });
+
+  // Remove from aurumUsers list
+  const users = JSON.parse(localStorage.getItem('aurumUsers') || '[]');
+  const updated = users.filter(u => !emailsToDelete.includes(u));
+  localStorage.setItem('aurumUsers', JSON.stringify(updated));
+
+  loadInsights();
 }
 
 // ============ CHECK AUTH ON LOAD ============
