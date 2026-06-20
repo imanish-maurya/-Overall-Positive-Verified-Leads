@@ -786,12 +786,11 @@ const ALLOWED_DOMAIN = 'aurumanalytica.in';
 // ── Admin Emails — sabhi ko Insights tab dikhega ──────────────────────────
 const ADMIN_EMAILS = [
   'manish.maurya@aurumanalytica.in',
- 'deepak.singh@aurumanalytica.in',
-  'beena.k@aurumanalytica.in'
-  // '3rd.admin@aurumanalytica.in',
+'beena.k@aurumanalytica.in',
+'deepak.singh@aurumanalytica.in',
 
 ];
-const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
+const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
 
 // ── Aurum OTP Server URL ──────────────────────────────────────────────────
 // Local testing: 'http://localhost:3000'
@@ -954,9 +953,19 @@ function launchDashboard(email, isAdmin) {
   // Show logged-in user in topbar
   const badge = document.getElementById('topbarBadge');
   if (badge) {
-    badge.innerHTML = '👤 ' + email.split('@')[0];
-    badge.style.background = 'rgba(46,158,91,0.25)';
-    badge.style.borderColor = 'rgba(46,158,91,0.4)';
+    if (isAdmin) {
+      // Admin: gold crown chip
+      badge.innerHTML = '👑 Admin';
+      badge.style.background = 'rgba(200,165,18,0.25)';
+      badge.style.borderColor = 'rgba(200,165,18,0.55)';
+      badge.style.color = '#f5d560';
+    } else {
+      // Normal user: show email as chip
+      badge.innerHTML = '👤 ' + email;
+      badge.style.background = 'rgba(24,95,165,0.25)';
+      badge.style.borderColor = 'rgba(24,95,165,0.55)';
+      badge.style.color = '#fff';
+    }
   }
   
   // Restore saved agent name (skip for admin, they view all)
