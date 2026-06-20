@@ -917,6 +917,7 @@ async function verifyOTP() {
       localStorage.setItem('aurumLoggedIn', '1');
       localStorage.setItem('aurumUser', currentEmail);
       localStorage.setItem('aurumRole', isAdmin ? 'admin' : 'user');
+      localStorage.setItem('aurumLoginTime', Date.now().toString()); // session timestamp
       trackActivity(currentEmail, 'login');
       launchDashboard(currentEmail, isAdmin);
     } else {
@@ -1037,6 +1038,7 @@ function logoutUser() {
   localStorage.removeItem('aurumLoggedIn');
   localStorage.removeItem('aurumUser');
   localStorage.removeItem('aurumRole');
+  localStorage.removeItem('aurumLoginTime');
   window.location.reload();
 }
 
@@ -1179,7 +1181,28 @@ window.addEventListener('DOMContentLoaded', function() {
   const role = localStorage.getItem('aurumRole');
   
   if (loggedIn && user) {
-    launchDashboard(user, role === 'admin');
+    // 10-din session expire check
+    const SESSION_DAYS = 15;
+    const loginTime = parseInt(localStorage.getItem('aurumLoginTime') || '0');
+    const elapsed = Date.now() - loginTime;
+    const expireMs = SESSION_DAYS * 24 * 60 * 60 * 1000;
+
+    if (loginTime && elapsed > expireMs) {
+      // Session expire — sab clear karo, login page dikhao
+      localStorage.removeItem('aurumLoggedIn');
+      localStorage.removeItem('aurumUser');
+      localStorage.removeItem('aurumRole');
+      localStorage.removeItem('aurumLoginTime');
+      localStorage.removeItem('selectedAgent');
+      // Login page already visible by default — bas alert dikhao
+      const errEl = document.getElementById('emailErr');
+      if (errEl) {
+        errEl.textContent = '🔒 Your session has expired after 10 days. Please login again.';
+        errEl.classList.add('show');
+      }
+    } else {
+      launchDashboard(user, role === 'admin');
+    }
   }
   
   // Patch handleFile and submitToSheets to track activity
