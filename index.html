@@ -206,13 +206,71 @@
   padding: 1rem;
   box-sizing: border-box;
 }
+
+/* ── Floating orbs ── */
 .login-page::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 50%, rgba(24,95,165,0.15) 0%, transparent 60%),
-              radial-gradient(ellipse at 70% 30%, rgba(200,165,18,0.08) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 30% 50%, rgba(24,95,165,0.10) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(200,165,18,0.05) 0%, transparent 50%);
+  animation: bgPulse 10s ease-in-out infinite alternate;
 }
+@keyframes bgPulse {
+  0%   { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+
+
+/* ── Grid lines background ── */
+.login-grid-lines {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(24,95,165,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24,95,165,0.035) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridMove 20s linear infinite;
+}
+@keyframes gridMove {
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+
+/* ── Card entrance ── */
+@keyframes cardSlideIn {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes brandFadeIn {
+  0%   { opacity: 0; transform: translateX(-14px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.login-card { animation: cardSlideIn 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+.login-brand { animation: brandFadeIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+
+/* ── Shimmer on card top border ── */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #185FA5, #c8a512, #2e9e5b, #185FA5);
+  background-size: 200% 100%;
+  border-radius: 20px 20px 0 0;
+  animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Pulsing logo dot ── */
+@keyframes logoPulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(200,165,18,0.2)); }
+  50%       { filter: drop-shadow(0 0 10px rgba(200,165,18,0.45)); }
+}
+.login-logo-wrap img { animation: logoPulse 3s ease-in-out infinite; }
 .login-grid {
   position: relative;
   z-index: 2;
@@ -564,7 +622,9 @@
 
 <!-- ===== LOGIN PAGE ===== -->
 <div id="loginPage" class="login-page">
-  <div class="login-grid">
+  <canvas id="aiCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:1"></canvas>
+  <div class="login-grid-lines"></div>
+  <div class="login-grid" style="position:relative;z-index:2">
     <!-- Brand Side -->
     <div class="login-brand">
       <div class="login-logo-wrap">
@@ -1594,6 +1654,181 @@ async function submitToSheets(){
 }
 
 window.addEventListener('DOMContentLoaded', restoreSavedAgent);
+
+// ── Crystal Neural Network Animation ─────────────────────────────────────
+(function(){
+  const cv=document.getElementById('aiCanvas');
+  if(!cv) return;
+  const cx=cv.getContext('2d');
+  function resize(){ cv.width=cv.offsetWidth; cv.height=cv.offsetHeight; }
+  resize(); window.addEventListener('resize',resize);
+  const W=()=>cv.width, H=()=>cv.height;
+  let t=0;
+  function rand(a,b){return a+Math.random()*(b-a);}
+
+  const stars=[];
+  for(let i=0;i<120;i++) stars.push({x:rand(0,1),y:rand(0,1),r:rand(0.3,1.2),a:rand(0.15,0.9),da:rand(-0.005,0.005)});
+
+  const nodes=[];
+  for(let i=0;i<45;i++) nodes.push({
+    x:rand(0.04,0.96), y:rand(0.04,0.96),
+    z:rand(0.25,1.0),
+    vx:rand(-0.00038,0.00038), vy:rand(-0.00028,0.00028),
+    r:rand(1.8,4.2),
+    hue:[210,230,270,195,220][Math.floor(Math.random()*5)],
+    pulse:rand(0,Math.PI*2), ps:rand(0.055,0.10),
+    lit:Math.random()>0.65
+  });
+
+  const pkts=[];
+  function spawnPkt(){
+    const ai=Math.floor(Math.random()*nodes.length);
+    let bi=Math.floor(Math.random()*nodes.length);
+    while(bi===ai) bi=Math.floor(Math.random()*nodes.length);
+    const a=nodes[ai],b=nodes[bi];
+    const cw=W(),ch=H();
+    const dx=(b.x-a.x)*cw,dy=(b.y-a.y)*ch;
+    if(Math.sqrt(dx*dx+dy*dy)<200)
+      pkts.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,t:0,spd:rand(0.022,0.045),hue:a.hue});
+  }
+  for(let i=0;i<20;i++) spawnPkt();
+
+  function drawBg(){
+    const cw=W(),ch=H();
+    // Base solid color — matches login-page CSS exactly
+    cx.fillStyle='#0d2244';
+    cx.fillRect(0,0,cw,ch);
+    // Subtle radial glow from center outward — no dark center patch
+    const rg=cx.createRadialGradient(cw*0.5,ch*0.5,0,cw*0.5,ch*0.5,Math.max(cw,ch)*0.72);
+    rg.addColorStop(0,'rgba(24,95,165,0.18)');
+    rg.addColorStop(0.4,'rgba(15,42,74,0.10)');
+    rg.addColorStop(1,'rgba(10,22,40,0.0)');
+    cx.fillStyle=rg; cx.fillRect(0,0,cw,ch);
+  }
+
+  function drawHex(){
+    const s=44,cw=W(),ch=H();
+    cx.strokeStyle='rgba(100,160,255,0.09)'; cx.lineWidth=0.6;
+    for(let r=0;r<Math.ceil(ch/s)+2;r++){
+      for(let c=0;c<Math.ceil(cw/(s*1.73))+2;c++){
+        const x=c*s*1.73+(r%2)*s*0.865, y=r*s*0.75-s;
+        cx.beginPath();
+        for(let i=0;i<6;i++){
+          const a=Math.PI/180*(60*i-30);
+          i===0?cx.moveTo(x+s*Math.cos(a),y+s*Math.sin(a)):cx.lineTo(x+s*Math.cos(a),y+s*Math.sin(a));
+        }
+        cx.closePath(); cx.stroke();
+      }
+    }
+  }
+
+  function drawScan(){
+    const cw=W(),ch=H();
+    const y=(t*38)%ch;
+    const g=cx.createLinearGradient(0,y-28,0,y+28);
+    g.addColorStop(0,'transparent'); g.addColorStop(0.5,'rgba(120,180,255,0.055)'); g.addColorStop(1,'transparent');
+    cx.fillStyle=g; cx.fillRect(0,y-28,cw,56);
+  }
+
+  function drawCorners(){
+    const cw=W(),ch=H(),len=26,lw=1.1;
+    cx.strokeStyle='rgba(140,190,255,0.65)'; cx.lineWidth=lw;
+    [[18,18,1,1],[cw-18,18,-1,1],[18,ch-18,1,-1],[cw-18,ch-18,-1,-1]].forEach(function(c){
+      cx.beginPath();
+      cx.moveTo(c[0]+c[2]*len,c[1]); cx.lineTo(c[0],c[1]); cx.lineTo(c[0],c[1]+c[3]*len);
+      cx.stroke();
+    });
+  }
+
+  function drawStars(){
+    const cw=W(),ch=H();
+    stars.forEach(function(s){
+      s.a+=s.da; s.a=Math.max(0.08,Math.min(0.9,s.a));
+      cx.beginPath(); cx.arc(s.x*cw,s.y*ch,s.r,0,Math.PI*2);
+      cx.fillStyle='rgba(220,230,255,'+s.a+')'; cx.fill();
+    });
+  }
+
+  function drawEdges(){
+    const cw=W(),ch=H();
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        const a=nodes[i],b=nodes[j];
+        const dx=(b.x-a.x)*cw,dy=(b.y-a.y)*ch;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<220){
+          const al=(1-d/220)*0.45*(a.z+b.z)*0.5;
+          cx.beginPath();
+          cx.moveTo(a.x*cw,a.y*ch); cx.lineTo(b.x*cw,b.y*ch);
+          cx.strokeStyle='hsla('+((a.hue+b.hue)/2)+',85%,80%,'+al+')';
+          cx.lineWidth=1.4*(a.z+b.z)*0.5; cx.stroke();
+        }
+      }
+    }
+  }
+
+  function drawPackets(){
+    const cw=W(),ch=H();
+    for(let i=pkts.length-1;i>=0;i--){
+      const p=pkts[i]; p.t+=p.spd;
+      const x=p.ax*cw+(p.bx-p.ax)*cw*p.t;
+      const y=p.ay*ch+(p.by-p.ay)*ch*p.t;
+      cx.beginPath(); cx.arc(x,y,2.1,0,Math.PI*2);
+      cx.fillStyle='hsla('+p.hue+',90%,90%,0.95)'; cx.fill();
+      const g=cx.createRadialGradient(x,y,0,x,y,5.2);
+      g.addColorStop(0,'hsla('+p.hue+',90%,90%,0.48)'); g.addColorStop(1,'transparent');
+      cx.beginPath(); cx.arc(x,y,5.2,0,Math.PI*2); cx.fillStyle=g; cx.fill();
+      if(p.t>=1){pkts.splice(i,1); spawnPkt();}
+    }
+  }
+
+  function drawNodes(){
+    const cw=W(),ch=H();
+    nodes.forEach(function(n){
+      n.x+=n.vx; n.y+=n.vy;
+      if(n.x<0.02||n.x>0.98) n.vx*=-1;
+      if(n.y<0.02||n.y>0.98) n.vy*=-1;
+      n.pulse+=n.ps;
+      const pf=0.75+0.25*Math.sin(n.pulse);
+      const r=n.r*n.z*pf;
+      const nx=n.x*cw, ny=n.y*ch;
+      if(n.lit){
+        cx.beginPath(); cx.arc(nx,ny,r*2.8,0,Math.PI*2);
+        cx.strokeStyle='hsla('+n.hue+',85%,80%,'+(0.32*n.z)+')'; cx.lineWidth=1.2; cx.stroke();
+        cx.beginPath(); cx.arc(nx,ny,r*1.7,0,Math.PI*2);
+        cx.strokeStyle='hsla('+n.hue+',90%,88%,'+(0.55*n.z)+')'; cx.lineWidth=0.9; cx.stroke();
+        cx.beginPath(); cx.arc(nx,ny,r,0,Math.PI*2);
+        cx.fillStyle='hsla('+n.hue+',60%,96%,'+(0.95*n.z)+')'; cx.fill();
+        const g=cx.createRadialGradient(nx,ny,0,nx,ny,r*3.5);
+        g.addColorStop(0,'hsla('+n.hue+',90%,82%,'+(0.55*n.z)+')'); g.addColorStop(1,'transparent');
+        cx.beginPath(); cx.arc(nx,ny,r*3.5,0,Math.PI*2); cx.fillStyle=g; cx.fill();
+      } else {
+        cx.beginPath(); cx.arc(nx,ny,r*1.5,0,Math.PI*2);
+        cx.strokeStyle='hsla('+n.hue+',80%,75%,'+(0.40*n.z)+')'; cx.lineWidth=0.9; cx.stroke();
+        cx.beginPath(); cx.arc(nx,ny,r,0,Math.PI*2);
+        cx.fillStyle='hsla('+n.hue+',85%,88%,'+(0.88*n.z)+')'; cx.fill();
+        const g=cx.createRadialGradient(nx,ny,0,nx,ny,r*2.2);
+        g.addColorStop(0,'hsla('+n.hue+',80%,70%,'+(0.17*n.z)+')'); g.addColorStop(1,'transparent');
+        cx.beginPath(); cx.arc(nx,ny,r*2.2,0,Math.PI*2); cx.fillStyle=g; cx.fill();
+      }
+    });
+  }
+
+  let fCount=0;
+  function frame(){
+    if(document.hidden) { requestAnimationFrame(frame); return; }
+    fCount++;
+    drawBg();
+    if(fCount%3===0) drawHex();
+    drawScan(); drawStars();
+    drawEdges(); drawPackets(); drawNodes(); drawCorners();
+    t+=0.028;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+
 
 </script>
 
