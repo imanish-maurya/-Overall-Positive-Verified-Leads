@@ -196,6 +196,7 @@
 /* ============ LOGIN PAGE STYLES ============ */
 .login-page {
   min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #0a1628 0%, #0f2a4a 40%, #0d3a6e 70%, #0a1628 100%);
   display: flex;
   align-items: center;
@@ -622,7 +623,7 @@
 
 <!-- ===== LOGIN PAGE ===== -->
 <div id="loginPage" class="login-page">
-  <canvas id="aiCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:1"></canvas>
+  <canvas id="aiCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:1;display:block"></canvas>
   <div class="login-grid-lines"></div>
   <div class="login-grid" style="position:relative;z-index:2">
     <!-- Brand Side -->
@@ -1661,7 +1662,7 @@ window.addEventListener('DOMContentLoaded', restoreSavedAgent);
   if(!cv) return;
   const cx=cv.getContext('2d');
   function resize(){ cv.width=cv.offsetWidth; cv.height=cv.offsetHeight; }
-  resize(); window.addEventListener('resize',resize);
+  resize(); window.addEventListener('resize',resize); window.addEventListener('orientationchange',function(){ setTimeout(resize,200); });
   const W=()=>cv.width, H=()=>cv.height;
   let t=0;
   function rand(a,b){return a+Math.random()*(b-a);}
@@ -1730,15 +1731,7 @@ window.addEventListener('DOMContentLoaded', restoreSavedAgent);
     cx.fillStyle=g; cx.fillRect(0,y-28,cw,56);
   }
 
-  function drawCorners(){
-    const cw=W(),ch=H(),len=26,lw=1.1;
-    cx.strokeStyle='rgba(140,190,255,0.65)'; cx.lineWidth=lw;
-    [[18,18,1,1],[cw-18,18,-1,1],[18,ch-18,1,-1],[cw-18,ch-18,-1,-1]].forEach(function(c){
-      cx.beginPath();
-      cx.moveTo(c[0]+c[2]*len,c[1]); cx.lineTo(c[0],c[1]); cx.lineTo(c[0],c[1]+c[3]*len);
-      cx.stroke();
-    });
-  }
+
 
   function drawStars(){
     const cw=W(),ch=H();
@@ -1821,7 +1814,7 @@ window.addEventListener('DOMContentLoaded', restoreSavedAgent);
     drawBg();
     if(fCount%3===0) drawHex();
     drawScan(); drawStars();
-    drawEdges(); drawPackets(); drawNodes(); drawCorners();
+    drawEdges(); drawPackets(); drawNodes();
     t+=0.028;
     requestAnimationFrame(frame);
   }
