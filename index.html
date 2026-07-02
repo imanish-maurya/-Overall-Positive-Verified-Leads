@@ -1372,7 +1372,7 @@ async function grantAdminAccess(){
   const msg = document.getElementById('grantMsg');
   let email = inp.value.trim().toLowerCase();
   msg.style.color = '#c0392b';
-  if (!email) { msg.textContent = 'Pehle email daalo.'; return; }
+  if (!email) { msg.textContent = 'Please enter mail id'; return; }
   if (!email.includes('@')) email = email + '@' + ALLOWED_DOMAIN; 
   if (!email.endsWith('@' + ALLOWED_DOMAIN)) { msg.textContent = 'Sirf @' + ALLOWED_DOMAIN + ' emails ko access de sakte ho.'; return; }
   if (isAdminEmail(email)) { msg.textContent = email + ' You have Already An access of dashboard.'; return; }
