@@ -594,6 +594,20 @@
 }
 .user-table tbody tr:hover td { background: #f7f9fe; }
 .user-table tbody tr:last-child td { border-bottom: none; }
+.user-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Calibri', sans-serif;
+  white-space: nowrap;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  letter-spacing: .1px;
+}
 .activity-badge {
   display: inline-flex;
   align-items: center;
@@ -608,6 +622,18 @@
 .activity-badge.low { background: #e6f1fb; color: #0e4a84; border: 1px solid #93bde8; }
 .del-checkbox { width:16px; height:16px; accent-color:#c0392b; cursor:pointer; }
 .delete-bar { display:none; align-items:center; gap:10px; padding:8px 16px; background:#fdecea; border:1px solid #f5b7b1; border-radius:10px; margin-bottom:10px; }
+/* Admin Access panel — full width responsive */
+.access-grant-card {
+  background:#fff; border:1.5px solid #dbe4f0; border-radius:14px;
+  padding:1.25rem 1.5rem; box-shadow:0 4px 14px rgba(15,42,74,0.06);
+  margin-bottom:1.25rem; width:100%;
+}
+.access-grant-row { display:flex; gap:10px; flex-wrap:wrap; }
+@media (max-width: 600px) {
+  .access-grant-card { padding:1rem; }
+  .access-grant-row { flex-direction:column; }
+  .access-grant-row input, .access-grant-row button { width:100%; min-width:0 !important; }
+}
 .delete-bar.show { display:flex; }
 .delete-bar-txt { font-size:13px; color:#c0392b; font-weight:600; flex:1; }
 .delete-bar-btn { background:#c0392b; color:#fff; border:none; border-radius:8px; padding:6px 16px; font-size:12px; font-weight:700; font-family:'Calibri',sans-serif; cursor:pointer; box-shadow:0 3px 0 #922b21; transition:transform .15s; }
@@ -690,6 +716,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       User Insights
     </div>
+    <div class="admin-tab" id="tab-access" onclick="switchTab('access')" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Admin Access
+    </div>
   </div>
 
   <!-- Dashboard Content (existing) -->
@@ -739,7 +769,6 @@
           <option value="Manish">Manish</option>
           <option value="Deepak">Deepak</option>
           <option value="Keshav">Keshav</option>
-          <option Value="Nitin">Nitin</option>
           <option value="Abhishek">Abhishek</option>
         </select>
       </div>
@@ -819,7 +848,7 @@
     <div style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:18px;font-weight:800;color:#0f2a4a;font-family:'Calibri',sans-serif">User Activity Insights</div>
-        <div style="font-size:12px;color:#6b7a9a;margin-top:2px">Live usage statistics from localStorage (current browser)</div>
+        <div style="font-size:12px;color:#6b7a9a;margin-top:2px">Live usage statistics from 🔗Google Sheet</div>
       </div>
       <button onclick="loadInsights()" style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;font-family:'Calibri',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0d4a84;transition:transform .15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">↻ Refresh</button>
     </div>
@@ -840,13 +869,62 @@
             <th style="width:36px"><input type="checkbox" class="del-checkbox" id="selectAllChk" title="Select all" onchange="toggleSelectAll(this)"></th>
             <th>User (Email)</th>
             <th>Total Logins</th>
-            <th>Files Uploaded</th>
             <th>Sheets Submitted</th>
             <th>Last Active</th>
             <th>Activity Level</th>
           </tr></thead>
           <tbody id="insightsTableBody">
             <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">Loading insights...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Access Panel (sirf Main Admin ko dikhega) -->
+  <div id="tabAccess" class="admin-insights-panel">
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:18px;font-weight:800;color:#0f2a4a;font-family:'Calibri',sans-serif;display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Admin Access Control
+      </div>
+      <div style="font-size:12px;color:#6b7a9a;margin-top:2px">The Main Admin can grant or revoke admin access for any @aurumanalytica.in email address.</div>
+    </div>
+
+    <div class="access-grant-card">
+      <div style="font-size:13px;font-weight:700;color:#0f2a4a;margin-bottom:8px;font-family:'Calibri',sans-serif">Enter 📩email for Grant Admin Access</div>
+      <div class="access-grant-row">
+        <input type="text" id="grantEmailInput" placeholder="e.g. username@aurumanalytica.in"
+          style="flex:1;min-width:200px;padding:9px 13px;font-size:13.5px;font-family:'Calibri',sans-serif;font-weight:500;color:var(--text,#0f2a4a);background:#f4f6fb;border:1.5px solid #dbe4f0;border-radius:10px;outline:none"
+          onkeydown="if(event.key==='Enter')grantAdminAccess()" />
+        <button onclick="grantAdminAccess()"
+          style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0d4a84;transition:transform .15s;white-space:nowrap"
+          onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">+ Grant Access</button>
+      </div>
+      <div id="grantMsg" style="font-size:12px;margin-top:8px;font-weight:600;font-family:'Calibri',sans-serif"></div>
+    </div>
+
+    <div class="user-table-card">
+      <div class="user-table-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/></svg>
+        <div class="user-table-title">Current Admins</div>
+      </div>
+      <div class="delete-bar" id="accessDeleteBar">
+        <span class="delete-bar-txt" id="accessDeleteBarTxt">0 admins selected</span>
+        <button class="delete-bar-cancel" onclick="clearAccessSelection()">Cancel</button>
+        <button class="delete-bar-btn" onclick="removeSelectedAccess()">✕ Remove Access</button>
+      </div>
+      <div class="user-table-wrap">
+        <table class="user-table">
+          <thead><tr>
+            <th style="width:36px"><input type="checkbox" class="del-checkbox" id="accessSelectAllChk" title="Select all" onchange="toggleAccessSelectAll(this)"></th>
+            <th>Admin (Email)</th>
+            <th>Type</th>
+            <th>Access Given On</th>
+            <th style="width:110px">Action</th>
+          </tr></thead>
+          <tbody id="accessListBody">
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7a9a">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -862,11 +940,66 @@ const ALLOWED_DOMAIN = 'aurumanalytica.in';
 // ── Admin Emails — sabhi ko Insights tab dikhega ──────────────────────────
 const ADMIN_EMAILS = [
   'manish.maurya@aurumanalytica.in',
-  'beena.k@aurumanalytica.in',
-  'deepak.singh@aurumanalytica.in',
-  'abhishek.mishra@aurumanalytica.in',
-  'keshav.gupta@aurumanalytica.in',
 ];
+// ── Main Admin — Admin Access panel sirf isko dikhega ────────────────────
+const SUPER_ADMIN = 'manish.maurya@aurumanalytica.in';
+
+// ── Dynamic admins (Main Admin dwara granted) — localStorage + best-effort server sync ──
+// Storage format: [{email, at}] — 'at' = kab access diya gaya (ISO time). Purane plain-string entries bhi supported.
+function getGrantedAdminRecords(){
+  try{
+    const raw = JSON.parse(localStorage.getItem('aurumGrantedAdmins')||'[]');
+    return raw.map(r => {
+      if (typeof r === 'string') return { email: r.trim().toLowerCase(), at: null };
+      return { email: String(r.email||'').trim().toLowerCase(), at: r.at || null };
+    }).filter(r => r.email);
+  }catch(e){ return []; }
+}
+function getGrantedAdmins(){
+  return getGrantedAdminRecords().map(r => r.email);
+}
+function saveGrantedAdminRecords(records){
+  const seen = new Set(); const out = [];
+  records.forEach(r => { if(!seen.has(r.email)){ seen.add(r.email); out.push(r); } });
+  localStorage.setItem('aurumGrantedAdmins', JSON.stringify(out));
+}
+// Built-in admins jinko Main Admin ne remove kiya hai
+function getRemovedAdmins(){
+  try{ return JSON.parse(localStorage.getItem('aurumRemovedAdmins')||'[]').map(e=>String(e).trim().toLowerCase()).filter(e=>e); }
+  catch(e){ return []; }
+}
+function saveRemovedAdmins(list){
+  localStorage.setItem('aurumRemovedAdmins', JSON.stringify([...new Set(list)]));
+}
+function isAdminEmail(email){
+  email = String(email||'').trim().toLowerCase();
+  if (email === SUPER_ADMIN) return true; // Main Admin kabhi remove nahi ho sakta
+  if (getRemovedAdmins().includes(email)) return false;
+  return ADMIN_EMAILS.includes(email) || getGrantedAdmins().includes(email);
+}
+function isSuperAdmin(email){
+  return String(email||'').trim().toLowerCase() === SUPER_ADMIN;
+}
+// Best-effort central sync — agar Apps Script me 'get-admins' action ho to sab devices par sync rahega
+async function syncAdminsFromServer(){
+  try{
+    const res = await fetch(OTP_SERVER_URL + '?action=get-admins', { method:'GET' });
+    const data = await res.json();
+    if (data && Array.isArray(data.admins)) {
+      saveGrantedAdminRecords(data.admins.map(r => {
+        if (typeof r === 'string') return { email: r.trim().toLowerCase(), at: null };
+        return { email: String(r.email||'').trim().toLowerCase(), at: r.at || null };
+      }).filter(r => r.email));
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function pushAdminChangeToServer(action, email){
+  try{
+    fetch(OTP_SERVER_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action, email, by: localStorage.getItem('aurumUser')||'' }) });
+  }catch(e){}
+}
 const ADMIN_PASS = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Only admin has a password bypass
 
 // ── Aurum OTP Server URL ──────────────────────────────────────────────────
@@ -976,7 +1109,8 @@ async function verifyOTP() {
 
     if (data.success) {
       clearInterval(timerInterval);
-      const isAdmin = ADMIN_EMAILS.includes(currentEmail);
+      await syncAdminsFromServer(); // central admin list (agar server support kare)
+      const isAdmin = isAdminEmail(currentEmail);
       localStorage.setItem('aurumLoggedIn', '1');
       localStorage.setItem('aurumUser', currentEmail);
       localStorage.setItem('aurumRole', isAdmin ? 'admin' : 'user');
@@ -1050,6 +1184,10 @@ function launchDashboard(email, isAdmin) {
     document.getElementById('adminTabBar').classList.add('show');
     document.getElementById('adminTabBar').style.display = 'flex';
   }
+
+  // Admin Access tab — sirf Main Admin (SUPER_ADMIN) ko
+  const accessTab = document.getElementById('tab-access');
+  if (accessTab) accessTab.style.display = isSuperAdmin(email) ? 'flex' : 'none';
   
   // Show logout button
   const lb = document.getElementById('logoutBtn');
@@ -1109,13 +1247,169 @@ function logoutUser() {
 function switchTab(tab) {
   document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
   document.getElementById('tab-insights').classList.toggle('active', tab==='insights');
+  const ta = document.getElementById('tab-access');
+  if (ta) ta.classList.toggle('active', tab==='access');
   document.getElementById('tabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
   document.getElementById('tabInsights').style.display = tab==='insights' ? 'block' : 'none';
   document.getElementById('tabInsights').classList.toggle('show', tab==='insights');
+  const ap = document.getElementById('tabAccess');
+  if (ap) {
+    ap.style.display = tab==='access' ? 'block' : 'none';
+    ap.classList.toggle('show', tab==='access');
+  }
   if (tab==='insights') loadInsights();
+  if (tab==='access') renderAccessPanel();
+}
+
+// ── Admin Access panel (sirf SUPER_ADMIN) ─────────────────────────────────
+function fmtGrantTime(at){
+  if (!at) return '—';
+  try { return new Date(at).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return '—'; }
+}
+
+function renderAccessPanel(){
+  const body = document.getElementById('accessListBody');
+  if (!body) return;
+  const removed = getRemovedAdmins();
+  const granted = getGrantedAdminRecords().filter(r => !ADMIN_EMAILS.includes(r.email) && !removed.includes(r.email));
+  let html = '';
+  // Main Admin row — locked, checkbox disabled
+  ADMIN_EMAILS.filter(e => !removed.includes(e)).forEach(e => {
+    const c = userChipColor(e);
+    const isMain = e === SUPER_ADMIN;
+    const safe = e.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const action = isMain
+      ? '<span style="font-size:12px;color:#9aa7bd">🔒 Locked</span>'
+      : `<button onclick="revokeAdminAccess('${safe}')" style="background:#fde8e8;color:#c0392b;border:1px solid #f5c6c1;border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer">✕ Remove</button>`;
+    html += `<tr>
+      <td style="text-align:center"><input type="checkbox" class="del-checkbox" disabled title="Main Admin remove nahi ho sakta"></td>
+      <td><span class="user-chip" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}">${e}</span></td>
+      <td><span class="activity-badge ${isMain?'high':'mid'}">${isMain?'👑 Main Admin':'Built-in'}</span></td>
+      <td style="font-size:12px;color:#6b7a9a">—</td>
+      <td>${action}</td>
+    </tr>`;
+  });
+  granted.forEach(r => {
+    const c = userChipColor(r.email);
+    const safe = r.email.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    html += `<tr>
+      <td style="text-align:center"><input type="checkbox" class="del-checkbox access-row-chk" data-email="${safe}" onchange="onAccessRowCheck()"></td>
+      <td><span class="user-chip" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}">${r.email}</span></td>
+      <td><span class="activity-badge low">Granted</span></td>
+      <td style="font-size:12px;color:#6b7a9a">${fmtGrantTime(r.at)}</td>
+      <td><button onclick="revokeAdminAccess('${safe}')" style="background:#fde8e8;color:#c0392b;border:1px solid #f5c6c1;border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer">✕ Remove</button></td>
+    </tr>`;
+  });
+  body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7a9a">No admins.</td></tr>';
+  clearAccessSelection();
+}
+
+// Checkbox selection — bulk remove
+function onAccessRowCheck(){
+  const checked = document.querySelectorAll('.access-row-chk:checked');
+  const all = document.querySelectorAll('.access-row-chk');
+  const bar = document.getElementById('accessDeleteBar');
+  const txt = document.getElementById('accessDeleteBarTxt');
+  const selAll = document.getElementById('accessSelectAllChk');
+  const n = checked.length;
+  if (n > 0) {
+    bar.classList.add('show');
+    txt.textContent = n + ' admin' + (n > 1 ? 's' : '') + ' selected — access will be removed';
+  } else {
+    bar.classList.remove('show');
+  }
+  if (selAll) selAll.checked = all.length > 0 && n === all.length;
+}
+function toggleAccessSelectAll(chk){
+  document.querySelectorAll('.access-row-chk').forEach(c => { c.checked = chk.checked; });
+  onAccessRowCheck();
+}
+function clearAccessSelection(){
+  document.querySelectorAll('.access-row-chk').forEach(c => { c.checked = false; });
+  const selAll = document.getElementById('accessSelectAllChk');
+  if (selAll) selAll.checked = false;
+  const bar = document.getElementById('accessDeleteBar');
+  if (bar) bar.classList.remove('show');
+}
+function removeSelectedAccess(){
+  const checked = [...document.querySelectorAll('.access-row-chk:checked')].map(c => c.dataset.email);
+  if (!checked.length) return;
+  if (!confirm('Remove admin access for ' + checked.length + ' admin' + (checked.length>1?'s':'') + '?\n\n' + checked.join('\n'))) return;
+  checked.forEach(email => { doRevoke(email); });
+  const msg = document.getElementById('grantMsg');
+  if (msg) { msg.style.color = '#b06a00'; msg.textContent = '✕ ' + checked.length + ' admin' + (checked.length>1?'s':'') + ' ka access hata diya.'; }
+  renderAccessPanel();
+}
+
+function grantAdminAccess(){
+  const inp = document.getElementById('grantEmailInput');
+  const msg = document.getElementById('grantMsg');
+  let email = inp.value.trim().toLowerCase();
+  msg.style.color = '#c0392b';
+  if (!email) { msg.textContent = 'Pehle email daalo.'; return; }
+  if (!email.includes('@')) email = email + '@' + ALLOWED_DOMAIN; // sirf naam likha ho to domain auto
+  if (!email.endsWith('@' + ALLOWED_DOMAIN)) { msg.textContent = 'Sirf @' + ALLOWED_DOMAIN + ' emails ko access de sakte ho.'; return; }
+  if (isAdminEmail(email)) { msg.textContent = email + ' ke paas already admin access hai.'; return; }
+  // Agar pehle remove kiya tha, to restore
+  const removed = getRemovedAdmins();
+  if (removed.includes(email)) {
+    saveRemovedAdmins(removed.filter(e => e !== email));
+  }
+  if (!ADMIN_EMAILS.includes(email)) {
+    const records = getGrantedAdminRecords().filter(r => r.email !== email);
+    records.push({ email, at: new Date().toISOString() }); // time capture
+    saveGrantedAdminRecords(records);
+  }
+  pushAdminChangeToServer('grant-admin', email);
+  inp.value = '';
+  msg.style.color = '#1e7e44';
+  msg.textContent = '✔ ' + email + ' ko admin access mil gaya. (Next login par Insights tab dikhega)';
+  renderAccessPanel();
+}
+
+// Core revoke (bina confirm ke) — bulk remove me reuse hota hai
+function doRevoke(email){
+  email = String(email||'').trim().toLowerCase();
+  if (email === SUPER_ADMIN) return;
+  saveGrantedAdminRecords(getGrantedAdminRecords().filter(r => r.email !== email));
+  if (ADMIN_EMAILS.includes(email)) {
+    const removed = getRemovedAdmins();
+    removed.push(email);
+    saveRemovedAdmins(removed);
+  }
+  pushAdminChangeToServer('revoke-admin', email);
+}
+
+function revokeAdminAccess(email){
+  email = String(email||'').trim().toLowerCase();
+  if (email === SUPER_ADMIN) { alert('Main Admin ka access remove nahi ho sakta.'); return; }
+  if (!confirm('Remove admin access for ' + email + ' ?')) return;
+  doRevoke(email);
+  const msg = document.getElementById('grantMsg');
+  if (msg) { msg.style.color = '#b06a00'; msg.textContent = '✕ ' + email + ' ka admin access hata diya. (Wapas dena ho to upar email daal kar Grant karo)'; }
+  renderAccessPanel();
 }
 
 // Admin: load insights from localStorage
+// Colored chip per user — stable color assigned by email hash
+const USER_CHIP_COLORS = [
+  {bg:'#e3f0fc', tx:'#185FA5', bd:'#b9d9f5'},  // blue
+  {bg:'#e8f7ef', tx:'#1e7e44', bd:'#bfe8cf'},  // green
+  {bg:'#fdf1e0', tx:'#b06a00', bd:'#f5dcb0'},  // amber
+  {bg:'#f3e9fb', tx:'#7b3fb0', bd:'#e0c8f2'},  // purple
+  {bg:'#fde8ee', tx:'#c0395b', bd:'#f5c2d1'},  // pink
+  {bg:'#e0f5f5', tx:'#0e7a7a', bd:'#b8e5e5'},  // teal
+  {bg:'#fdeae6', tx:'#c0492b', bd:'#f5c9be'},  // coral
+  {bg:'#eef1f7', tx:'#3d4a63', bd:'#d3dae8'}   // slate
+];
+function userChipColor(email){
+  let h = 0;
+  const s = String(email||'').toLowerCase();
+  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+  return USER_CHIP_COLORS[h % USER_CHIP_COLORS.length];
+}
+
 function renderInsightsTable(rows) {
   let totalLogins = 0, totalUploads = 0, totalSubmits = 0;
   rows.forEach(r => { totalLogins += r.logins; totalUploads += r.uploads; totalSubmits += r.submits; });
@@ -1123,12 +1417,11 @@ function renderInsightsTable(rows) {
   document.getElementById('insightsSummary').innerHTML = `
     <div class="insight-card"><div class="insight-label">Total Users</div><div class="insight-val">${rows.length}</div></div>
     <div class="insight-card green"><div class="insight-label">Total Logins</div><div class="insight-val">${totalLogins}</div></div>
-    <div class="insight-card"><div class="insight-label">Files Uploaded</div><div class="insight-val">${totalUploads}</div></div>
     <div class="insight-card amber"><div class="insight-label">Sheets Submitted</div><div class="insight-val">${totalSubmits}</div></div>
   `;
 
   if (rows.length === 0) {
-    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
+    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">No user activity recorded yet.</td></tr>';
     return;
   }
 
@@ -1140,11 +1433,11 @@ function renderInsightsTable(rows) {
     const levelTxt = total >= 10 ? 'High' : total >= 3 ? 'Medium' : 'Low';
     const last = r.lastActive ? new Date(r.lastActive).toLocaleString('en-IN') : '—';
     const safeEmail = r.email.replace(/"/g, '&quot;');
+    const c = userChipColor(r.email);
     return `<tr>
       <td style="text-align:center"><input type="checkbox" class="del-checkbox row-chk" data-email="${safeEmail}" onchange="onRowCheck()"></td>
-      <td style="font-weight:600">${r.email}</td>
+      <td><span class="user-chip" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}" title="${safeEmail}">${r.email}</span></td>
       <td>${r.logins}</td>
-      <td>${r.uploads}</td>
       <td>${r.submits}</td>
       <td style="font-size:12px;color:#6b7a9a">${last}</td>
       <td><span class="activity-badge ${level}">${levelTxt}</span></td>
@@ -1155,7 +1448,7 @@ function renderInsightsTable(rows) {
 
 async function loadInsights() {
   // Show loading state
-  document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7a9a">⏳ Loading from server...</td></tr>';
+  document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">⏳ Loading from server...</td></tr>';
 
   // Try Google Sheets first (central data — all users from all devices)
   const centralRows = await fetchCentralActivity();
@@ -1176,7 +1469,7 @@ async function loadInsights() {
     });
     renderInsightsTable(rows);
   } catch(e) {
-    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#c0392b">Error loading insights.</td></tr>';
+    document.getElementById('insightsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c0392b">Error loading insights.</td></tr>';
   }
 }
 
@@ -1264,7 +1557,18 @@ window.addEventListener('DOMContentLoaded', function() {
         errEl.classList.add('show');
       }
     } else {
-      launchDashboard(user, role === 'admin');
+      const isAdm = role === 'admin' || isAdminEmail(user);
+      if (isAdm) localStorage.setItem('aurumRole', 'admin');
+      launchDashboard(user, isAdm);
+      // Background me server se admin list sync — access mila ho to bina re-login dikh jaye
+      if (!isAdm) {
+        syncAdminsFromServer().then(ok => {
+          if (ok && isAdminEmail(user)) {
+            localStorage.setItem('aurumRole', 'admin');
+            launchDashboard(user, true);
+          }
+        });
+      }
     }
   }
   
@@ -1297,6 +1601,29 @@ const POSITIVE=['positive prospects','site visit done','site visit proposed','cl
 const DATA_SHEET_NAMES=['Master Sheet','master sheet','Sheet1','Data','Leads','Dump','Source'];
 
 let allRows=[],filteredData=[],fileHeaders=[];
+let campFromSheet=false, campSheetCol=null; // Campaign ID auto-detect from Master Sheet header
+
+function setCampInputMode(){
+  const inp=document.getElementById('campId');
+  if(campFromSheet){
+    inp.value='';
+    inp.disabled=true;
+    inp.placeholder='Auto — from Master Sheet';
+    inp.style.background='#e8f7ef';
+    inp.style.borderColor='#2e9e5b';
+    inp.style.cursor='not-allowed';
+    inp.style.color='#1e7e44';
+    inp.style.fontWeight='700';
+  }else{
+    inp.disabled=false;
+    inp.placeholder='e.g. 2017';
+    inp.style.background='';
+    inp.style.borderColor='';
+    inp.style.cursor='';
+    inp.style.color='';
+    inp.style.fontWeight='';
+  }
+}
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -1382,6 +1709,8 @@ function handleFile(input){
   document.getElementById('submitBtn').disabled=true;
   document.getElementById('tblWrap').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><p>Upload an Excel file to view filtered leads</p><span>Positive Prospects, Site Visit Done, Booking Done & more will appear here</span></div>';
   allRows=[]; filteredData=[]; fileHeaders=[];
+  campFromSheet=false; campSheetCol=null;
+  setCampInputMode();
   ['Err','Ok','Warn'].forEach(t=>{document.getElementById('alert'+t).classList.remove('show');});
 
   document.getElementById('uploadTxt').textContent='File loaded';
@@ -1399,6 +1728,13 @@ function handleFile(input){
       si.classList.add('show');
       allRows=result.rows;
       fileHeaders=Object.keys(allRows[0]).map(h=>String(h).trim());
+      // Auto-detect Campaign ID header in Master Sheet
+      campSheetCol=mapHeader('Campaign ID');
+      campFromSheet=!!campSheetCol;
+      setCampInputMode();
+      if(campFromSheet){
+        si.textContent+=' | Campaign ID: Auto (from sheet column "'+campSheetCol+'")';
+      }
       // Auto-set date to today - 1 (local date, not UTC)
       const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
       const yy=yesterday.getFullYear();
@@ -1444,7 +1780,7 @@ function processData(){
   filteredData=out.map(row=>{
     const mapped={};
     OUT_HEADERS.forEach(h=>{
-      if(h==='Campaign ID'){mapped[h]=campId||'';}
+      if(h==='Campaign ID'){mapped[h]=campFromSheet?String(row[campSheetCol]||'').trim():(campId||'');}
       else if(h==='Last Feedback Date'){mapped[h]=fmtCutoffDisplay();}
       else{
         const col=mapHeader(h)||h;
@@ -1472,7 +1808,7 @@ function processData(){
   renderTable();
   if(!TAB) showAlert('Warn','Please select your name first.');
   else if(filteredData.length===0) showAlert('Warn','No leads found. Date filter: upto '+fmtCutoffDisplay());
-  else showAlert('Ok',filteredData.length+' positive leads ready — review and submit.');
+  else showAlert('Ok',filteredData.length+' positive leads ready — review and submit.'+(campFromSheet?' (Campaign ID auto-filled from Master Sheet)':''));
 }
 
 function getRemarkBadge(val){
@@ -1537,6 +1873,8 @@ function resetAll(){
   ['Err','Ok','Warn'].forEach(t=>{document.getElementById('alert'+t).classList.remove('show');});
   document.getElementById('tblWrap').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><p>Upload an Excel file to view filtered leads</p><span>Positive Prospects, Site Visit Done, Booking Done & more will appear here</span></div>';
   allRows=[]; filteredData=[]; fileHeaders=[];
+  campFromSheet=false; campSheetCol=null;
+  setCampInputMode();
   // NOTE: user name chip + admin chip stay — login session remains
 }
 
@@ -1564,7 +1902,7 @@ function showSuccess(count){
   document.getElementById('progressSpinIcon').style.animation='none';
   document.getElementById('progressSpinIcon').innerHTML='<polyline points="20 6 9 17 4 12"/>';
   document.getElementById('progressTitle').textContent='Successfully Submitted!';
-  document.getElementById('progressSub').innerHTML='<strong style="color:#2e9e5b;font-size:16px">'+count+' leads</strong> have been successfully updated into your G-Sheet.<br><br><span style="font-size:12px;color:#6b7a9a">Tab: '+TAB+' | Campaign: '+document.getElementById('campId').value.trim()+'</span>';
+  document.getElementById('progressSub').innerHTML='<strong style="color:#2e9e5b;font-size:16px">'+count+' leads</strong> have been successfully updated into your G-Sheet.<br><br><span style="font-size:12px;color:#6b7a9a">Tab: '+TAB+' | Campaign: '+(campFromSheet?'Auto (Master Sheet)':document.getElementById('campId').value.trim())+'</span>';
   document.getElementById('progressBarWrap').style.display='none';
   document.getElementById('progressPct').textContent='';
   document.getElementById('progressDoneBtn').style.display='inline-block';
@@ -1609,7 +1947,7 @@ function restoreSavedAgent(){
 async function submitToSheets(){
   if(!filteredData.length){showAlert('Err','No data to submit.'); return;}
   if(!TAB){showAlert('Err','Please select your name before submitting.'); return;}
-  if(!document.getElementById('campId').value.trim()){showAlert('Err','Please enter Campaign ID before submitting.'); return;}
+  if(!campFromSheet && !document.getElementById('campId').value.trim()){showAlert('Err','Please enter Campaign ID before submitting.'); return;}
 
   showProgress();
   setProgress(20,'Building payload...');
@@ -1632,6 +1970,9 @@ async function submitToSheets(){
     setTimeout(()=>{
       showSuccess(filteredData.length);
       // Auto-clear file and Campaign ID after successful submit
+      allRows=[]; filteredData=[]; fileHeaders=[];
+      campFromSheet=false; campSheetCol=null;
+      setCampInputMode();
       document.getElementById('campId').value='';
       document.getElementById('fileInput').value='';
       document.getElementById('uploadTxt').textContent='Click to select file';
