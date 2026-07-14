@@ -712,7 +712,47 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard
     </div>
-    <div class="admin-tab" id="tab-insights" onclick="switchTab('insights')">
+    <style>
+      /* ── 3D dynamic look: Formatting Mail + User Insights tabs ── */
+      @keyframes tabPopIn{
+        0%{opacity:0;transform:perspective(420px) rotateX(-70deg) translateY(-10px) scale(.85)}
+        55%{opacity:1;transform:perspective(420px) rotateX(14deg) translateY(2px) scale(1.05)}
+        100%{opacity:1;transform:perspective(420px) rotateX(0) translateY(0) scale(1)}
+      }
+      @keyframes tabShine{ 0%{left:-80%} 100%{left:130%} }
+      .admin-tab{
+        position:relative; overflow:hidden; transform-style:preserve-3d;
+        transition:transform .18s cubic-bezier(.2,.9,.3,1.4), box-shadow .18s, background .18s;
+        will-change:transform;
+      }
+      .admin-tab.tab-pop{
+        animation:tabPopIn .55s cubic-bezier(.2,.9,.3,1.35) both;
+      }
+      #tab-formatting.tab-pop{ animation-delay:.07s }
+      #tab-insights.tab-pop{ animation-delay:.14s }
+      #tab-access.tab-pop{ animation-delay:.21s }
+      .admin-tab:hover{
+        transform:perspective(520px) translateY(-3px) rotateX(10deg) scale(1.05);
+        box-shadow:0 8px 18px rgba(15,42,74,.28), 0 3px 0 rgba(15,42,74,.12);
+      }
+      .admin-tab:active{
+        transform:perspective(520px) translateY(1px) rotateX(0) scale(.97);
+        box-shadow:0 2px 6px rgba(15,42,74,.2);
+      }
+      .admin-tab::after{
+        content:''; position:absolute; top:0; left:-80%; width:55%; height:100%;
+        background:linear-gradient(105deg, transparent 0%, rgba(255,255,255,.55) 50%, transparent 100%);
+        transform:skewX(-20deg); pointer-events:none; opacity:0;
+      }
+      .admin-tab:hover::after{
+        opacity:1; animation:tabShine .6s ease forwards;
+      }
+    </style>
+    <div class="admin-tab" id="tab-formatting" onclick="switchTab('formatting')" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      Formatting Mail
+    </div>
+    <div class="admin-tab" id="tab-insights" onclick="switchTab('insights')" style="display:none">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       User Insights
     </div>
@@ -883,6 +923,1072 @@
     </div>
   </div>
 
+  <!-- Formatting Mail Panel (access-controlled) -->
+  <div id="tabFormatting" style="display:none;padding:10px 14px 20px">
+    <iframe id="fmtFrame" title="Formatting Mail"
+      style="width:100%;height:calc(100vh - 160px);min-height:640px;border:none;border-radius:12px;background:#fff;box-shadow:0 6px 24px rgba(15,42,74,.10)"
+      srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<title>Feedback Mail Studio</title>
+<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js&quot;></script>
+<style>
+  :root{
+    --ink:#122B3A; --ink2:#1E3D52; --paper:#FFFFFF; --desk:#EDF0F4;
+    --accent:#0F7B6C; --accent2:#0A5F53; --amber:#F2A93B; --line:#D5DBE3;
+    --xlhead:#DDEBF7; --xlheadink:#1F4E79; --xlborder:#000000;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--desk);font-family:&quot;Segoe UI&quot;,system-ui,Arial,sans-serif;color:var(--ink)}
+  /* ---------- frozen header (top bar + tabs) ---------- */
+  .frozen-head{position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(15,42,74,.10)}
+  /* ---------- top bar ---------- */
+  .top{background:#ffffff;color:#0f2a4a;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:1px solid #e3eaf4}
+  .filechip{font-size:13px;font-weight:600;background:#f4f6fb;border:1.5px solid #dbe4f0;padding:6px 14px;border-radius:20px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f2a4a;display:flex;align-items:center;gap:6px}
+  .top .spacer{flex:1}
+  .btn{border:0;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter .15s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn.primary{background:var(--amber);color:#3A2A00}
+  .btn.ghost{background:#2A4A61;color:#EAF2F8}
+  .btn.green{background:var(--accent);color:#fff}
+  .btn.small{padding:5px 10px;font-size:12px}
+  .btn.danger{background:#8E3B3B;color:#fff}
+  /* 3D buttons */
+  .btn.b3d{border-radius:8px;transform:translateY(0);transition:transform .08s, box-shadow .08s}
+  .btn.b3d.primary{background:linear-gradient(180deg,#FFC85C 0%,#F2A93B 55%,#E09420 100%);color:#3A2A00;box-shadow:0 4px 0 #A8700D, 0 7px 12px rgba(0,0,0,.35)}
+  .btn.b3d.ghost{background:linear-gradient(180deg,#3D6480 0%,#2A4A61 60%,#203B4E 100%);color:#EAF2F8;box-shadow:0 4px 0 #0F2331, 0 7px 12px rgba(0,0,0,.35)}
+  .btn.b3d:hover{filter:brightness(1.07)}
+  .btn.b3d:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:6px;background:#ffffff;padding:0 18px;border-bottom:2px solid #e3eaf4}
+  .tab{padding:10px 22px;font-size:13px;font-weight:600;color:#6b7a9a;background:transparent;border:0;cursor:pointer;border-radius:8px 8px 0 0;font-family:inherit}
+  .tab.active{background:#eef4fb;color:#0f2a4a;box-shadow:inset 0 -3px 0 #185FA5}
+  /* ---------- workspace ---------- */
+  .wrap{max-width:1180px;margin:16px auto 60px;padding:0 16px}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink2)}
+  .cfg{display:grid;grid-template-columns:220px 200px 1fr;gap:12px;align-items:start}
+  .cfg label{display:block;font-size:11px;font-weight:700;color:#5A6B7A;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+  .cfg input,.cfg textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;background:#FAFBFC}
+  .cfg textarea{min-height:88px;resize:vertical;line-height:1.5}
+  .cfg input:focus,.cfg textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .cfg .hint{font-size:11px;color:#7C8B99;margin-top:4px}
+  .cfgbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  /* ---------- toolbar ---------- */
+  .toolbar{position:sticky;top:52px;z-index:40;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:10px;box-shadow:0 2px 6px rgba(18,43,58,.08)}
+  .tbtn{min-width:30px;height:30px;border:1px solid transparent;background:transparent;border-radius:5px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
+  .tbtn:hover{background:#EDF3F0;border-color:#CFE0DA}
+  .tsep{width:1px;height:22px;background:var(--line);margin:0 4px}
+  .toolbar select{height:30px;border:1px solid var(--line);border-radius:5px;font-size:12px;font-family:inherit;background:#fff}
+  .toolbar input[type=color]{width:30px;height:30px;border:1px solid var(--line);border-radius:5px;padding:2px;background:#fff;cursor:pointer}
+  .toolbar .tlabel{font-size:10px;color:#7C8B99;margin-left:2px}
+  /* ---------- mail canvas ---------- */
+  .mailwrap{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:34px 40px;min-height:420px;box-shadow:0 4px 18px rgba(18,43,58,.07);overflow-x:auto;scroll-behavior:smooth}
+  .mailwrap::-webkit-scrollbar{height:10px}
+  .mailwrap::-webkit-scrollbar-track{background:#EEF1F5;border-radius:6px}
+  .mailwrap::-webkit-scrollbar-thumb{background:#B9C6D2;border-radius:6px}
+  .mailwrap::-webkit-scrollbar-thumb:hover{background:#8FA3B5}
+  .mail{font-family:Calibri,&quot;Segoe UI&quot;,Arial,sans-serif;font-size:11pt;color:#000;line-height:1.35;outline:none}
+  .mail p{margin:0 0 8pt}
+  .mail table{border-collapse:collapse;table-layout:fixed;margin:4pt 0 10pt}
+  .mail td,.mail th{border:1px solid var(--xlborder);padding:3px 7px;font-family:Calibri,Arial,sans-serif;font-size:11pt;vertical-align:middle;position:relative;overflow:hidden;word-wrap:break-word}
+  .empty{padding:40px;text-align:center;color:#8296A5;font-size:14px}
+  .empty b{color:var(--ink2)}
+  /* resize handles */
+  .rz-col{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:5}
+  .rz-col:hover{background:rgba(15,123,108,.35)}
+  .rz-row{position:absolute;left:0;bottom:-3px;height:7px;width:100%;cursor:row-resize;user-select:none;z-index:5}
+  .rz-row:hover{background:rgba(15,123,108,.35)}
+  /* toast */
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:99}
+  #toast.on{opacity:1}
+  .hidden{display:none!important}
+  @media(max-width:800px){.cfg{grid-template-columns:1fr}.mailwrap{padding:18px}}
+</style>
+</head>
+<body>
+
+<div class=&quot;frozen-head&quot;>
+<div class=&quot;top&quot;>
+  <div class=&quot;filechip&quot; id=&quot;fileChip&quot;><span style=&quot;font-size:14px&quot;>📄</span><span id=&quot;fileName&quot;>No file loaded</span><span id=&quot;fileClear&quot; title=&quot;Remove file&quot; style=&quot;display:none;margin-left:8px;cursor:pointer;color:#c0392b;font-weight:700&quot;>&amp;#10005;</span></div>
+  <div class=&quot;spacer&quot;></div>
+  <input type=&quot;file&quot; id=&quot;fileInput&quot; accept=&quot;.xlsx,.xlsm,.xls,.csv&quot; style=&quot;display:none&quot;>
+  <button class=&quot;btn primary b3d&quot; id=&quot;btnUpload&quot;>&amp;#8679; Upload File</button>
+  <button class=&quot;btn ghost b3d&quot; id=&quot;btnRefresh&quot; title=&quot;Remove the loaded file&quot;>&amp;#8635; Refresh</button>
+</div>
+
+<div class=&quot;tabs&quot;>
+  <button class=&quot;tab active&quot; data-tab=&quot;analysis&quot; id=&quot;tabA&quot;>1&amp;#65039;&amp;#8419; Analysis Mail</button>
+  <button class=&quot;tab&quot; data-tab=&quot;source&quot; id=&quot;tabS&quot;>2&amp;#65039;&amp;#8419; Source Wise Mail</button>
+</div>
+</div><!-- /frozen-head -->
+
+<div class=&quot;wrap&quot;>
+
+  <!-- ===== CONFIG PANELS ===== -->
+  <div class=&quot;panel&quot; id=&quot;cfg-analysis&quot;>
+    <h3>Analysis mail &amp;mdash; settings (auto-saved in browser)</h3>
+    <div class=&quot;cfg&quot;>
+      <div>
+        <label>Sheet name (data read from here)</label>
+        <input id=&quot;a_sheet&quot; placeholder=&quot;e.g. Analysis&quot;>
+        <div class=&quot;hint&quot;>Reference sheet for tables, Note, CM / AM names.</div>
+        <label style=&quot;margin-top:10px&quot;>Reporting date (editable)</label>
+        <input id=&quot;a_date&quot; placeholder=&quot;auto: today - 1&quot;>
+      </div>
+      <div>
+        <label>Available sheets in file</label>
+        <div id=&quot;sheetList&quot; style=&quot;font-size:12px;color:#44586A;line-height:1.7&quot;>&amp;mdash;</div>
+      </div>
+      <div>
+        <label>Header names (one per line &amp;mdash; read in this order)</label>
+        <textarea id=&quot;a_headers&quot; placeholder=&quot;Reporting Summary:&amp;#10;Daily Run Rate (DRR) Overview&quot;></textarea>
+        <div class=&quot;hint&quot;>Each header is searched in the sheet and the table below it is added to the mail.</div>
+      </div>
+    </div>
+    <div class=&quot;cfgbtns&quot;>
+      <button class=&quot;btn green&quot; id=&quot;a_gen&quot;>&amp;#9889; Generate Analysis Mail</button>
+      <button class=&quot;btn danger small&quot; id=&quot;a_resetReco&quot;>Reset Recommendations to auto</button>
+    </div>
+  </div>
+
+  <div class=&quot;panel hidden&quot; id=&quot;cfg-source&quot;>
+    <h3>Source wise mail &amp;mdash; settings (auto-saved in browser)</h3>
+    <div class=&quot;cfg&quot;>
+      <div>
+        <label>Sheet name (data read from here)</label>
+        <input id=&quot;s_sheet&quot; placeholder=&quot;e.g. Source&quot;>
+        <label style=&quot;margin-top:10px&quot;>Reporting date (editable)</label>
+        <input id=&quot;s_date&quot; placeholder=&quot;auto: today - 1&quot;>
+      </div>
+      <div>
+        <label>Available sheets in file</label>
+        <div id=&quot;sheetList2&quot; style=&quot;font-size:12px;color:#44586A;line-height:1.7&quot;>&amp;mdash;</div>
+      </div>
+      <div>
+        <label>Header names (one per line &amp;mdash; read in this order)</label>
+        <textarea id=&quot;s_headers&quot; placeholder=&quot;Daily Run Rate (DRR) Overview&amp;#10;Source-Wise Lead Performance&quot;></textarea>
+        <div class=&quot;hint&quot;>The table below each header will be added to the source mail.</div>
+      </div>
+    </div>
+    <div class=&quot;cfgbtns&quot;>
+      <button class=&quot;btn green&quot; id=&quot;s_gen&quot;>&amp;#9889; Generate Source Mail</button>
+      <button class=&quot;btn danger small&quot; id=&quot;s_resetReco&quot;>Reset Recommendations to auto</button>
+    </div>
+  </div>
+
+  <!-- ===== FORMAT TOOLBAR ===== -->
+  <div class=&quot;toolbar&quot; id=&quot;toolbar&quot;>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;bold&quot; title=&quot;Bold&quot;><b>B</b></button>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;italic&quot; title=&quot;Italic&quot;><i>I</i></button>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;underline&quot; title=&quot;Underline&quot;><u>U</u></button>
+    <div class=&quot;tsep&quot;></div>
+    <select id=&quot;fontSize&quot; title=&quot;Font size&quot;>
+      <option value=&quot;&quot;>Size</option>
+      <option value=&quot;1&quot;>8</option><option value=&quot;2&quot;>10</option>
+      <option value=&quot;3&quot; selected>11 (default)</option>
+      <option value=&quot;4&quot;>14</option><option value=&quot;5&quot;>18</option>
+      <option value=&quot;6&quot;>24</option><option value=&quot;7&quot;>36</option>
+    </select>
+    <div class=&quot;tsep&quot;></div>
+    <input type=&quot;color&quot; id=&quot;foreColor&quot; value=&quot;#c00000&quot; title=&quot;Text colour&quot;>
+    <span class=&quot;tlabel&quot;>Text</span>
+    <input type=&quot;color&quot; id=&quot;hiliteColor&quot; value=&quot;#ffff00&quot; title=&quot;Highlight&quot;>
+    <span class=&quot;tlabel&quot;>Highlight</span>
+    <div class=&quot;tsep&quot;></div>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;justifyLeft&quot; title=&quot;Align left&quot;>&amp;#8676;</button>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;justifyCenter&quot; title=&quot;Align centre&quot;>&amp;#8596;</button>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;justifyRight&quot; title=&quot;Align right&quot;>&amp;#8677;</button>
+    <div class=&quot;tsep&quot;></div>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;insertUnorderedList&quot; title=&quot;Bullet list&quot;>&amp;#8226;&amp;#8801;</button>
+    <button class=&quot;tbtn&quot; data-cmd=&quot;removeFormat&quot; title=&quot;Clear formatting&quot;>&amp;#10683;</button>
+    <div class=&quot;tsep&quot;></div>
+    <span class=&quot;tlabel&quot;>Tip: drag table column / row borders to resize, just like Excel</span>
+    <span style=&quot;margin-left:auto;font-size:11px;color:#2E7D32;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;padding:2px 8px;white-space:nowrap&quot; title=&quot;Text color, highlight, table resize and recommendations formatting are saved automatically&quot;>&amp;#128190; Auto-save: ON</span>
+    <button class=&quot;btn green b3d&quot; id=&quot;btnCopy&quot;>&amp;#128203; Copy Mail</button>
+  </div>
+
+  <!-- ===== MAIL CANVASES ===== -->
+  <div class=&quot;mailwrap&quot;>
+    <div class=&quot;mail&quot; id=&quot;mail-analysis&quot; contenteditable=&quot;true&quot; spellcheck=&quot;false&quot;>
+      <div class=&quot;empty&quot;><b>No file loaded.</b><br>Upload a file, set the sheet name &amp;amp; headers, then click Generate to build the Analysis mail.</div>
+    </div>
+    <div class=&quot;mail hidden&quot; id=&quot;mail-source&quot; contenteditable=&quot;true&quot; spellcheck=&quot;false&quot;>
+      <div class=&quot;empty&quot;><b>No file loaded.</b><br>Upload a file, set the sheet name &amp;amp; headers, then click Generate to build the Source Wise mail.</div>
+    </div>
+  </div>
+</div>
+
+<div id=&quot;toast&quot;></div>
+
+<script>
+/* ================= storage wrapper (claude.ai window.storage -> localStorage -> memory) ================= */
+const _mem = {};
+const store = {
+  async get(k){
+    if (window.storage &amp;&amp; window.storage.get){ try{ const r = await window.storage.get(k); if(r &amp;&amp; r.value!=null) return r.value; }catch(e){} }
+    try{ const v = localStorage.getItem(k); if(v!=null) return v; }catch(e){}
+    return (k in _mem) ? _mem[k] : null;
+  },
+  async set(k,v){
+    let ok=false;
+    if (window.storage &amp;&amp; window.storage.set){ try{ await window.storage.set(k,String(v)); ok=true; }catch(e){} }
+    try{ localStorage.setItem(k,String(v)); ok=true; }catch(e){}
+    if(!ok) _mem[k]=String(v);
+  },
+  async del(k){
+    if (window.storage &amp;&amp; window.storage.delete){ try{ await window.storage.delete(k); }catch(e){} }
+    try{ localStorage.removeItem(k); }catch(e){}
+    delete _mem[k];
+  }
+};
+
+/* ================= state ================= */
+let sheets = {};          // {sheetName: string[][]}
+let sheetMerges = {};     // {sheetName: [{sr,sc,er,ec}]}
+let sheetNames = [];
+let fileName = '';
+let activeTab = 'analysis';
+
+const DEFAULTS = {
+  analysis: { sheet:'Analysis', headers:['Reporting Summary:','Daily Run Rate (DRR) Overview','Qualification Breakdown (Feedback Analysis)','Weekly Analysis Report:','RNR &amp; Call back Attempts:'] },
+  source:   { sheet:'Source',   headers:['Daily Run Rate (DRR) Overview','Campaign Overview','Overall  Summary','Source-Wise For LMS','Source-Wise Lead Performance','Source-Wise Lead Disposition Breakdown','Meta Audience-Wise Lead Analysis','Meta Creative-Wise Lead Analysis'] }
+};
+
+const $ = id => document.getElementById(id);
+const toastEl = $('toast');
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('on'); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),2600); }
+
+function yesterdayStr(){
+  const d = new Date(); d.setDate(d.getDate()-1);
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d.getDate()).padStart(2,'0')+'-'+m[d.getMonth()]+'-'+d.getFullYear();
+}
+
+/* ================= helpers: grid search &amp; table extraction ================= */
+function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[\s\u00a0]+/g,' ').replace(/[:\-–_]+$/,'').trim(); }
+function isNum(s){ return /^-?[\d,]*\.?\d+%?$/.test(String(s).trim()) &amp;&amp; String(s).trim()!==''; }
+
+function cleanCell(v){
+  let s = String(v==null?'':v).trim();
+  if (/^-?\d*\.\d{4,}$/.test(s)){ s = (Math.round(parseFloat(s)*100)/100).toString(); } // trim long decimals
+  return s;
+}
+
+function findCell(grid, text, used){
+  const q = norm(text); if(!q) return null;
+  let partial = null;
+  for(let r=0;r<grid.length;r++){
+    const row = grid[r]||[];
+    for(let c=0;c<row.length;c++){
+      const n = norm(row[c]); if(!n) continue;
+      const key = r+'_'+c; if(used &amp;&amp; used.has(key)) continue;
+      if(n===q || n.startsWith(q)){ if(used) used.add(key); return {r,c}; }
+      if(!partial &amp;&amp; n.includes(q)) partial = {r,c,key};
+    }
+  }
+  if(partial){ if(used) used.add(partial.key); return {r:partial.r,c:partial.c}; }
+  return null;
+}
+
+function rowHasContent(grid,r,c0,c1){
+  const row = grid[r]||[];
+  for(let c=c0;c<c1;c++){ if(String(row[c]==null?'':row[c]).trim()!=='') return true; }
+  return false;
+}
+
+function extractTable(grid, r, c, stops){
+  stops = stops || [];
+  // first content row below header cell
+  let sr = r+1;
+  while(sr<grid.length &amp;&amp; !rowHasContent(grid,sr,c,c+40)) sr++;
+  if(sr>=grid.length) return null;
+  // width from union of first 3 rows, contiguous from column c
+  const samples = [sr, sr+1, sr+2].filter(x=>x<grid.length);
+  let width = 0;
+  for(let k=c;k<c+60;k++){
+    const any = samples.some(rr => String((grid[rr]||[])[k]==null?'':(grid[rr]||[])[k]).trim()!=='');
+    if(any) width = k-c+1; else break;
+  }
+  if(width<1) return null;
+  // helper: does a 'Grand Total' row (first column) exist ahead, before a 3-blank-row break?
+  function hasGTAhead(from){
+    let blanks = 0;
+    for(let p=from; p<grid.length &amp;&amp; p<from+60; p++){
+      if(rowHasContent(grid,p,c,c+width)){
+        blanks = 0;
+        if(norm((grid[p]||[])[c]).startsWith('grand total')) return true;
+      } else { blanks++; if(blanks>=3) return false; }
+    }
+    return false;
+  }
+  // rows: continue while content; cross small blank gaps only when the table
+  // genuinely continues up to a Grand Total row (user rule: define till Grand Total)
+  function isOtherHeaderRow(rowIdx){
+    const row = grid[rowIdx]||[];
+    for(let k=c;k<c+width;k++){
+      const n = norm(row[k]); if(!n) continue;
+      if(stops.some(sname => sname &amp;&amp; (n===sname || n.startsWith(sname)))) return true;
+    }
+    return false;
+  }
+  const abs = [];
+  let rr = sr;
+  while(rr < grid.length &amp;&amp; rr < sr+400){
+    if(rowHasContent(grid,rr,c,c+width)){ abs.push(rr); rr++; continue; }
+    let probe = rr, blanks = 0;
+    while(probe < grid.length &amp;&amp; blanks < 3 &amp;&amp; !rowHasContent(grid,probe,c,c+width)){ blanks++; probe++; }
+    if(probe >= grid.length || blanks >= 3) break;
+    const prow = grid[probe]||[];
+    let filled = 0; for(let k=c;k<c+width;k++){ if(String(prow[k]==null?'':prow[k]).trim()!=='') filled++; }
+    const first = norm(prow[c]);
+    const isGT = first.startsWith('grand total');
+    // never cross into another table: title rows (single cell) or rows matching a configured header
+    if(isOtherHeaderRow(probe)) break;
+    if(!isGT &amp;&amp; (filled < 3 || !hasGTAhead(probe))) break;
+    rr = probe;
+  }
+  const rows = abs.map(a=>{ const out=[]; for(let k=c;k<c+width;k++) out.push(cleanCell((grid[a]||[])[k])); return out; });
+  // caption row: single-cell first row followed by fuller row -> drop
+  if(rows.length>1){
+    const filled0 = rows[0].filter(x=>x!=='').length;
+    const filled1 = rows[1].filter(x=>x!=='').length;
+    if(filled0===1 &amp;&amp; filled1>=3){ rows.shift(); abs.shift(); }
+  }
+  return rows.length ? {rows, abs, c0:c} : null;
+}
+
+/* map sheet merges into local (row,col) spans for one extracted table */
+function spansFor(sheetName, meta){
+  const spans = {};
+  const ncols = meta.rows[0].length;
+  (sheetMerges[sheetName]||[]).forEach(m=>{
+    let sc = m.sc - meta.c0, ec = m.ec - meta.c0;
+    if(ec < 0 || sc >= ncols) return;
+    sc = Math.max(0,sc); ec = Math.min(ncols-1,ec);
+    const loc = []; meta.abs.forEach((a,i)=>{ if(a>=m.sr &amp;&amp; a<=m.er) loc.push(i); });
+    if(!loc.length) return;
+    const sr = loc[0], er = loc[loc.length-1];
+    if(er===sr &amp;&amp; ec===sc) return;
+    spans[sr+'_'+sc] = {rs:er-sr+1, cs:ec-sc+1};
+    for(let r=sr;r<=er;r++) for(let k=sc;k<=ec;k++){ if(!(r===sr&amp;&amp;k===sc)) spans[r+'_'+k]='skip'; }
+  });
+  return spans;
+}
+
+function labelValue(grid,label){
+  const q = norm(label);
+  for(let r=0;r<grid.length;r++){
+    const row = grid[r]||[];
+    for(let c=0;c<row.length;c++){
+      if(norm(row[c]).startsWith(q) &amp;&amp; norm(row[c])!==''){
+        for(let k=c+1;k<=c+4 &amp;&amp; k<row.length+4;k++){
+          const v = String((row[k]==null?'':row[k])).trim();
+          if(v!=='') return v;
+        }
+      }
+    }
+  }
+  return null;
+}
+function fetchAcross(prefSheet,label){
+  if(sheets[prefSheet]){ const v = labelValue(sheets[prefSheet],label); if(v!=null) return v; }
+  for(const n of sheetNames){ if(n===prefSheet) continue; const v = labelValue(sheets[n]||[],label); if(v!=null) return v; }
+  return null;
+}
+function firstInt(s){ const m = String(s==null?'':s).match(/-?\d+/); return m?parseInt(m[0],10):null; }
+function pctIn(s){ const m = String(s==null?'':s).match(/\(([^)]*%?)\)/); return m?m[1].trim():null; }
+
+/* ===== Allocated QL (%) threshold — STRICTLY PER-SHEET =====
+   Har sheet ka apna &quot;Allocated QL (%)&quot; hota hai. Jis sheet se mail/tables ban
+   rahi hain, SIRF usi sheet se value uthao (e.g. &quot;18-20%&quot;) aur left ke first
+   2 digits (18) ko threshold banao. Doosri sheets se fallback NAHI —
+   warna galat sheet ka QL% lagkar colors galat aa jaate hain.
+   Sheet par label na mile -> qlThreshold null -> koi green/red nahi. */
+let qlThreshold = null;
+/* Style mode: 'fill' = solid green/red background (Analysis mail — done, sahi hai)
+               'text' = sirf text bold (Source mail): < QL% -> RED bold, >= QL% -> BLACK bold */
+let qlStyleMode = 'fill';
+function fetchQLThreshold(sheetName){
+  qlThreshold = scanQL(sheets[sheetName] || []);
+  if(qlThreshold==null){
+    // fallback: baaki sheets me bhi dekho (Source sheet par label na ho to Analysis/Master se mil jaye)
+    for(const n of sheetNames){ if(n===sheetName) continue; qlThreshold = scanQL(sheets[n]||[]); if(qlThreshold!=null) break; }
+  }
+  return qlThreshold;
+}
+function scanQL(g){
+  for(let r=0; r<g.length; r++){
+    const row = g[r]||[];
+    for(let c=0; c<row.length; c++){
+      if(norm(row[c]).indexOf('allocated ql')===0){
+        // 1) value label ke SAME cell me: &quot;Allocated QL (%) - 18-20%&quot;
+        const tail = String(row[c]).replace(/allocated\s*ql\s*\(?\s*%?\s*\)?/i,'');
+        let m = tail.match(/(\d{1,3})/);
+        if(m) return parseInt(m[1],10);
+        // 2) agle cells me: &quot;18-20%&quot; -> 18
+        for(let k=c+1; k<=c+4 &amp;&amp; k<row.length; k++){
+          const v = String(row[k]==null?'':row[k]).trim();
+          if(v!==''){ const mm = v.match(/(\d{1,3})/); return mm ? parseInt(mm[1],10) : null; }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/* ================= table HTML (inline styles so Outlook paste keeps look) ================= */
+function isNumCell(s){
+  s = String(s).trim();
+  if(s==='') return false;
+  if(s==='-'||s==='–') return true;                 // dash placeholder
+  return /\d/.test(s) &amp;&amp; !/[A-Za-z\u0900-\u097F]/.test(s); // digits, %, (), . , but no letters
+}
+function isDateLike(s){
+  return /^\d{1,2}[-\/\.](?:[A-Za-z]{3,9}|\d{1,2})[-\/\.]\d{2,4}$/.test(String(s).trim());
+}
+/* ================= table colour themes (Excel style) ================= */
+const CLR = {
+  blue:   'background:#2E75B6;color:#FFFFFF;font-weight:bold;',
+  orange: 'background:#F8CBAD;color:#000000;font-weight:bold;',
+  green:  'background:#C6EFCE;color:#006100;font-weight:bold;',
+  qlgreen:'background:#70AD47;color:#FFFFFF;font-weight:bold;',  // solid green (image-2 look) for qualification rows
+  red:    'background:#FFC7CE;color:#9C0006;font-weight:bold;'
+};
+function themeFor(tkey){
+  const t = tkey||'';
+  if(t.indexOf('drr')>-1 || t.indexOf('run rate')>-1) return 'drr';
+  if(t.indexOf('call back attempts')>-1 || t.indexOf('rnr &amp; call back')>-1 || t.indexOf('verified leads stats')>-1) return 'attempts';
+  if(t.indexOf('qualification breakdown')>-1 || t.indexOf('disposition breakdown')>-1 ||
+     t.indexOf('weekly analysis')>-1 || t.indexOf('audience')>-1 || t.indexOf('creative')>-1) return 'qual';
+  return 'default'; // blue header + Grand Total highlighted
+}
+/* positive-outcome rows highlighted green in qual-theme tables */
+const GREEN_ROWS = ['positive prospects','site visit done','site visit proposed','client qualified',
+                    'cross pitch','booking done','follow up','interested','cross project sv done'];
+function greenKey(s){ return norm(s).replace(/[-–_]/g,' ').replace(/\s+/g,' ').trim(); }
+function tableHTML(rows, tkey, spans){
+  spans = spans || {};
+  const cols = rows[0].length;
+  const theme = themeFor(tkey);
+  // Excel look: columns auto-fit their content (compact, single-line cells);
+  // very wide tables simply scroll sideways inside the canvas
+  // header rows: row0 always; row1 too if it has no numeric cell
+  const hdrRows = new Set([0]);
+  if(rows.length>1 &amp;&amp; !rows[1].some(isNumCell)) hdrRows.add(1);
+  // per-column last row that has content -> beyond this, no borders (Excel-style ragged table)
+  const lastContent = new Array(cols).fill(-1);
+  rows.forEach((row,ri)=>row.forEach((cell,ci)=>{ if(String(cell).trim()!=='') lastContent[ci]=ri; }));
+  // column alignment: any non-first column whose body values are mostly numbers/dates -> whole column centred
+  const colCenter = new Array(cols).fill(false);
+  for(let ci=1; ci<cols; ci++){
+    let n=0, hit=0;
+    rows.forEach((row,ri)=>{
+      if(hdrRows.has(ri)) return;
+      const v = String(row[ci]).trim(); if(v==='') return;
+      n++; if(isNumCell(v)||isDateLike(v)) hit++;
+    });
+    colCenter[ci] = n>0 &amp;&amp; hit/n >= 0.5;
+  }
+  // highlights must not spill into the right-side 'Stages' block
+  let stageCol = -1;
+  rows.slice(0,2).forEach(r=>r.forEach((cell,ci)=>{ if(stageCol===-1 &amp;&amp; norm(cell).indexOf('stage')===0) stageCol=ci; }));
+  const hiLimit = stageCol>0 ? stageCol : cols;
+
+  /* ===== Allocated QL rule: Grand Total row se base values nikaalo ===== */
+  let gtVals = null; // per-column numeric value of the Grand Total row
+  rows.forEach((row,ri)=>{
+    if(norm(row[0]).indexOf('grand total')===0){
+      gtVals = row.map(x=>{
+        const m = String(x).replace(/,/g,'').match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+      });
+    }
+  });
+  // cell ka % nikaalo: agar cell me % likha hai to wahi, warna value / GrandTotal * 100
+  function qlPct(cell, ci){
+    const s = String(cell).trim();
+    if(s==='' || s==='-' || s==='–') return null;
+    const pm = s.match(/(-?\d+(?:\.\d+)?)\s*%/);
+    if(pm) return parseFloat(pm[1]);                               // &quot;94 (15%)&quot; -> 15, &quot;12%&quot; -> 12
+    const m = s.replace(/,/g,'').match(/-?\d+(\.\d+)?/);
+    if(!m) return null;
+    if(gtVals &amp;&amp; gtVals[ci]!=null &amp;&amp; gtVals[ci]>0) return parseFloat(m[0])/gtVals[ci]*100;
+    return null;
+  }
+  // row ka first cell &quot;Qualification...&quot; ya &quot;Client Qualification...&quot; se SHURU ho tabhi row-rule lagti hai
+  // (CSQ/MQL jaise labels jinke beech me 'qualification' aata hai, wo column-rule se handle hote hain)
+  function isQLRowLabel(s){ const n = norm(s); return /^(client\s+)?qualification/.test(n); }
+  /* COLUMN rule: jis column ke HEADER me 'qualification' hai (Qualification Rate,
+     Qualification (As per Target/Delivery)...) us column ke % cells par bhi verdict lagta hai */
+  let qlCols = null;
+  if(qlThreshold!=null){
+    qlCols = new Set();
+    rows.forEach((r,ri)=>{ if(hdrRows.has(ri)) r.forEach((c,ci)=>{ if(ci>0 &amp;&amp; norm(c).indexOf('qualification')>-1) qlCols.add(ci); }); });
+    if(!qlCols.size) qlCols = null;
+  }
+  /* ===== Reporting Summary: KPI rows PINK bold; &quot;Lead's Duplicate In LMS (Removed)&quot; RED bold ===== */
+  const isSummaryTbl = (tkey||'').indexOf('summary')>-1;
+  function isDupLMSLabel(s){ const n = norm(s); return n.indexOf('duplicate in lms')>-1 &amp;&amp; n.indexOf('removed')>-1; }
+  function isPinkLabel(s){
+    const n = norm(s);
+    return n.startsWith('svp') || n.startsWith('svd')
+      || n.startsWith('site visit proposed') || n.startsWith('site visit done')
+      || n.startsWith('lead delivery achievement')
+      || /^(client\s+)?qualification/.test(n)
+      || n.startsWith('rnr categ');
+  }
+
+  const rkCount = {};
+  let html = '<table data-h=&quot;'+esc(tkey||'')+'&quot; style=&quot;border-collapse:collapse;table-layout:auto;font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:4pt 0 10pt&quot;>';
+  rows.forEach((row,ri)=>{
+    let rk = norm(row[0])||('r'+ri);
+    rkCount[rk]=(rkCount[rk]||0)+1; rk = rk+'#'+rkCount[rk];
+    const firstNorm = norm(row[0]);
+    const isGTRow = firstNorm.indexOf('grand total')===0;
+    const isGreenRow = theme==='qual' &amp;&amp; GREEN_ROWS.indexOf(greenKey(row[0]))>-1;
+    /* Allocated QL rule:
+       - jis cell me % likha hai -> uska APNA verdict (0% red, 19% green ...)
+       - jis cell me % nahi (&quot;-&quot; ya plain number) -> row ke overall % (rightmost % cell) ka verdict
+       Isse Weekly Analysis me har column sahi color leta hai, aur
+       Qualification Breakdown (- , - , 31 , 18%) puri row ek color rehti hai. */
+    let qlRowVerdict = null, qlCellVerdicts = null;
+    if(qlThreshold!=null &amp;&amp; gtVals &amp;&amp; !isGTRow &amp;&amp; !hdrRows.has(ri) &amp;&amp; isQLRowLabel(row[0])){
+      qlCellVerdicts = new Array(row.length).fill(null);
+      let explicitPct = null, computedPct = null;
+      for(let k=1;k<Math.min(row.length,hiLimit);k++){
+        const s = String(row[k]).trim();
+        if(s==='' || s==='-' || s==='–') continue;
+        const pm = s.match(/(-?\d+(?:\.\d+)?)\s*%/);
+        if(pm){
+          const p = parseFloat(pm[1]);
+          qlCellVerdicts[k] = (p >= qlThreshold);   // per-cell verdict
+          explicitPct = p;                           // rightmost % = row-level %
+          continue;
+        }
+        const p = qlPct(s, k);
+        if(p!=null) computedPct = p;
+      }
+      const rowPct = explicitPct!=null ? explicitPct : computedPct;
+      if(rowPct!=null) qlRowVerdict = (rowPct >= qlThreshold);
+      if(qlRowVerdict==null &amp;&amp; qlCellVerdicts.every(v=>v==null)) qlCellVerdicts = null;
+    }
+    html+='<tr data-rk=&quot;'+esc(rk)+'&quot;>';
+    row.forEach((cell,ci)=>{
+      const sp = spans[ri+'_'+ci];
+      if(sp==='skip') return;                            // covered by a merged cell
+      const dead = ri > lastContent[ci] &amp;&amp; !sp;          // trailing empty cell in this column
+      const hdr = hdrRows.has(ri) &amp;&amp; !dead;
+      const centre = colCenter[ci] || isNumCell(cell);
+      const wrap = String(cell).length > 42 ? 'normal' : 'nowrap'; // keep cells single-line like Excel
+      let st = 'padding:2px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt;position:relative;overflow:hidden;vertical-align:middle;white-space:'+wrap+';';
+      st += dead ? 'border:none;background:transparent;' : 'border:1px solid #000000;';
+      if(hdr){
+        // attempts-style tables: first header band orange, second band blue
+        if(theme==='attempts' &amp;&amp; ri===0 &amp;&amp; hdrRows.has(1)) st += CLR.orange+'text-align:center;';
+        else st += CLR.blue+'text-align:center;';
+      }
+      else if(isGTRow &amp;&amp; !dead &amp;&amp; ci<hiLimit) st += CLR.blue + (centre?'text-align:center;':'text-align:left;');
+      else if(qlCellVerdicts &amp;&amp; !dead &amp;&amp; ci<hiLimit &amp;&amp; (qlCellVerdicts[ci]!=null || qlRowVerdict!=null)){
+        const ok = qlCellVerdicts[ci]!=null ? qlCellVerdicts[ci] : qlRowVerdict;
+        if(qlStyleMode==='text'){
+          // text mode: label black bold; sirf % wale cells colored; baaki (plain numbers) untouched
+          if(ci===0) st += 'color:#000000;font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+          else if(qlCellVerdicts[ci]!=null) st += 'color:'+(ok?'#000000':'#FF3B3B')+';font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+          else st += (centre?'text-align:center;':'text-align:left;');
+        }
+        else
+          st += (ok ? CLR.qlgreen : CLR.red) + (centre?'text-align:center;':'text-align:left;');
+      }
+      else if(qlCols &amp;&amp; qlCols.has(ci) &amp;&amp; qlThreshold!=null &amp;&amp; !dead &amp;&amp; ci<hiLimit &amp;&amp; !hdrRows.has(ri) &amp;&amp; String(cell).match(/\d\s*%/)){
+        // COLUMN rule: Qualification-named column ka % cell — < QL red, >= QL black (bold)
+        const pm = String(cell).match(/(-?\d+(?:\.\d+)?)\s*%/);
+        const ok = parseFloat(pm[1]) >= qlThreshold;
+        if(qlStyleMode==='text')
+          st += 'color:'+(ok?'#000000':'#FF3B3B')+';font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+        else
+          st += (ok ? CLR.qlgreen : CLR.red) + (centre?'text-align:center;':'text-align:left;');
+      }
+      else if(isSummaryTbl &amp;&amp; !dead &amp;&amp; ci<hiLimit &amp;&amp; !hdrRows.has(ri) &amp;&amp; isDupLMSLabel(row[0])){
+        st += 'color:#FF0000;font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+      }
+      else if(isSummaryTbl &amp;&amp; !dead &amp;&amp; ci<hiLimit &amp;&amp; !hdrRows.has(ri) &amp;&amp; isPinkLabel(row[0])){
+        st += 'color:#FF00FF;font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+      }
+      else if(isGreenRow &amp;&amp; !dead &amp;&amp; ci<hiLimit) st += CLR.green + (centre?'text-align:center;':'text-align:left;');
+      else if(theme==='drr' &amp;&amp; ci>0 &amp;&amp; norm(cell)==='on track') st += CLR.green+'text-align:center;';
+      else if(theme==='drr' &amp;&amp; ci>0 &amp;&amp; /delay|behind|off track|slow/.test(norm(cell))) st += CLR.red+'text-align:center;';
+      else st+= centre?'text-align:center;':'text-align:left;';
+      const attrs = sp ? ' rowspan=&quot;'+sp.rs+'&quot; colspan=&quot;'+sp.cs+'&quot;' : '';
+      html+='<td'+attrs+' style=&quot;'+st+'&quot;>'+esc(cell)+
+        (ri===0?'<span class=&quot;rz-col&quot; contenteditable=&quot;false&quot;></span>':'')+
+        (ci===0 &amp;&amp; !dead?'<span class=&quot;rz-row&quot; contenteditable=&quot;false&quot;></span>':'')+
+        '</td>';
+    });
+    html+='</tr>';
+  });
+  return html+'</table>';
+}
+function esc(s){ return String(s).replace(/&amp;/g,'&amp;amp;').replace(/</g,'&amp;lt;').replace(/>/g,'&amp;gt;'); }
+function heading(t){ return '<p style=&quot;margin:10pt 0 2pt;font-family:Calibri,Arial,sans-serif;font-size:14pt&quot;><b>'+esc(t)+'</b></p>'; } // headers: 14pt, no underline (user rule)
+function mention(name){ return '<b style=&quot;color:#0078D4&quot;>@'+esc(name||'Team')+'</b>'; }
+/* escaped text me @Name (1-4 capitalized words) ko Outlook-blue tag bana do */
+function tagify(escText){
+  return String(escText).replace(/@([A-Z][\w.'-]*(?:[ \u00A0]+[A-Z][\w.'-]*){0,3})/g,
+    '<b style=&quot;color:#0078D4&quot;>@$1</b>');
+}
+
+/* ================= table formatting memory =================
+   User applies colour / bold / highlight / size on a table cell, or resizes
+   columns &amp; rows -> we remember it by (table, row label, column) and re-apply
+   it on every newly generated report (just like Recommendations). */
+function decoOf(td){
+  const d = {};
+  /* size / bold / italic / underline ab capture NAHI hote —
+     ye stale memory se rows par lagkar table ko uneven bana dete the.
+     Sirf colours &amp; highlights yaad rakhte hain. */
+  const f = td.querySelector('font[color]'); if(f) d.color = f.getAttribute('color');
+  td.querySelectorAll('span[style],font[style]').forEach(sp=>{
+    if(sp.style.color) d.color = sp.style.color;
+    if(sp.style.backgroundColor) d.bg = sp.style.backgroundColor;
+  });
+  const THEME_BGS = ['rgb(221, 235, 247)','rgb(46, 117, 182)','rgb(198, 239, 206)','rgb(112, 173, 71)','rgb(248, 203, 173)','rgb(255, 199, 206)','transparent'];
+  const tdbg = td.style.backgroundColor;
+  if(tdbg &amp;&amp; THEME_BGS.indexOf(tdbg)===-1) d.bg = tdbg;
+  return Object.keys(d).length ? d : null;
+}
+function cellText(td){
+  let t=''; td.childNodes.forEach(n=>{
+    if(n.nodeType===1 &amp;&amp; n.classList &amp;&amp; (n.classList.contains('rz-col')||n.classList.contains('rz-row'))) return;
+    t += n.textContent;
+  });
+  return t;
+}
+function captureTableFmt(mailEl){
+  const fmt = {};
+  mailEl.querySelectorAll('table[data-h]').forEach(tb=>{
+    const tkey = tb.getAttribute('data-h'); if(!tkey) return;
+    const rec = {cells:{}, cols:null, rows:{}};
+    const cg = tb.querySelectorAll('col');
+    if(cg.length &amp;&amp; tb.dataset.frozen) rec.cols = Array.from(cg).map(c=>c.style.width||'');
+    tb.querySelectorAll('tr').forEach(tr=>{
+      const rk = tr.getAttribute('data-rk'); if(!rk) return;
+      const h = tr.children[0] &amp;&amp; tr.children[0].style.height;
+      if(h) rec.rows[rk] = h;
+      Array.from(tr.children).forEach((td,ci)=>{
+        const d = decoOf(td);
+        if(d) rec.cells[rk+'|'+ci] = d;
+      });
+    });
+    if(Object.keys(rec.cells).length || rec.cols || Object.keys(rec.rows).length) fmt[tkey] = rec;
+  });
+  return fmt;
+}
+function applyDeco(td, d){
+  /* sirf colour &amp; highlight re-apply hote hain; purani memory me pade
+     b / i / u / size ignore -> table hamesha uniform 11pt rahegi */
+  if(!d.color &amp;&amp; !d.bg) return;
+  const handles = Array.from(td.querySelectorAll('.rz-col,.rz-row'));
+  let html = esc(cellText(td));
+  const stl = [];
+  if(d.color) stl.push('color:'+d.color);
+  if(d.bg) stl.push('background-color:'+d.bg);
+  html = '<span style=&quot;'+stl.join(';')+'&quot;>'+html+'</span>';
+  td.innerHTML = html;
+  handles.forEach(h=>td.appendChild(h));
+}
+function applyTableFmt(mailEl, fmt){
+  if(!fmt) return;
+  mailEl.querySelectorAll('table[data-h]').forEach(tb=>{
+    const rec = fmt[tb.getAttribute('data-h')]; if(!rec) return;
+    if(rec.cols){
+      let cg = tb.querySelector('colgroup');
+      if(!cg){
+        cg = document.createElement('colgroup');
+        const n = (tb.querySelector('tr')||{children:[]}).children.length;
+        for(let i=0;i<n;i++) cg.appendChild(document.createElement('col'));
+        tb.insertBefore(cg, tb.firstChild);
+      }
+      const cgs = cg.querySelectorAll('col');
+      rec.cols.forEach((w,i)=>{ if(w &amp;&amp; cgs[i]) cgs[i].style.width = w; });
+      tb.style.tableLayout='fixed'; tb.dataset.frozen='1';
+    }
+    tb.querySelectorAll('tr').forEach(tr=>{
+      const rk = tr.getAttribute('data-rk'); if(!rk) return;
+      if(rec.rows[rk]){ tr.style.height = rec.rows[rk]; Array.from(tr.children).forEach(c=>c.style.height = rec.rows[rk]); }
+      Array.from(tr.children).forEach((td,ci)=>{
+        /* Qualification rows par saved manual colors apply NAHI karte —
+           QL rule (red/black/green) hi final hai, warna purani manual
+           coloring memory se lagkar galat colors dikhte hain */
+        if(rk.indexOf('qualification')>-1) return;
+        const d = rec.cells[rk+'|'+ci];
+        if(d) applyDeco(td, d);
+      });
+    });
+  });
+}
+function fetchVals(cfgSheet){
+  return {
+    cm:  fetchAcross(cfgSheet,'Campaign Manager Name') || 'Campaign Manager',
+    am:  fetchAcross(cfgSheet,'Account Manager Name') || 'Account Manager',
+    rnr: pctIn(fetchAcross(cfgSheet,'RNR Category')) || '',
+    svp: pctIn(fetchAcross(cfgSheet,'SVP')) || '',
+    svd: pctIn(fetchAcross(cfgSheet,'SVD')) || '',
+    ae:  firstInt(fetchAcross(cfgSheet,'Already Exist')) || 0,
+    pend:(firstInt(fetchAcross(cfgSheet,'Missing Lead'))||0) + (firstInt(fetchAcross(cfgSheet,'No Remark'))||0) + (firstInt(fetchAcross(cfgSheet,'Feedback Pending'))||0)
+  };
+}
+function dynSpan(key,val,color){ return '<span data-dyn=&quot;'+key+'&quot;'+(color?' style=&quot;color:'+color+'&quot;':'')+'>'+esc(val)+'</span>'; }
+function mentionDyn(key,name){ return '<b style=&quot;color:#0078D4&quot;>@'+dynSpan(key,name)+'</b>'; }
+function aeLine(v){ return '<li data-line=&quot;ae&quot; style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>'+mentionDyn('am',v.am)+' Client has mentioned <b style=&quot;color:#C00000&quot;>'+dynSpan('ae',v.ae)+'</b> leads are duplicates or already exist in their system. Please connect with the client and provide screenshots for these cases along with detailed remarks and the source.</li>'; }
+function pendLine(v){ return '<li data-line=&quot;pend&quot; style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>'+mentionDyn('am',v.am)+' Current <b style=&quot;color:#C00000&quot;>'+dynSpan('pend',v.pend)+'</b> leads are feedback pending from client side please check and connect with the client for these pending feedback, however we have not included them in analysis report.</li>'; }
+
+function buildReco(kind, cfgSheet){
+  const v = fetchVals(cfgSheet);
+  let li = '';
+  li += '<li style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>'+mentionDyn('cm',v.cm)+' RNR category (<span style=&quot;color:#C00000&quot;>'+dynSpan('rnr',v.rnr)+'</span>) for Re-engagement to improve conversion</li>';
+  li += '<li style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>Increase Site Visit Proposed ('+dynSpan('svp',v.svp)+') and Site Visit Done ('+dynSpan('svd',v.svd)+')</li>';
+  li += '<li style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>We need to explore new audience segments &amp;amp; Platform, for delivering the desired results for the campaign.</li>';
+  li += '<li style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>We recommend re-engaging potential leads that have been marked as \u2018Follow Up\u2019 or \u2018Call Back\u2019\u2014whether by the client team or the Aurum team.</li>';
+  li += '<li style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>Additionally, to improve the call connectivity ratio, please consider experimenting with better time slots or alternative contact methods such as WhatsApp or SMS &amp;#8211; <b>AM Need to share updates with client Team</b></li>';
+  if(v.ae>0) li += aeLine(v);
+  if(v.pend>0) li += pendLine(v);
+  return '<div data-block=&quot;reco&quot; style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;><p data-rh=&quot;1&quot; style=&quot;margin:10pt 0 2pt;font-family:Calibri,Arial,sans-serif;font-size:14pt&quot;><b><u>Recommendations:</u></b></p><ul style=&quot;margin:0 0 10pt 20px;padding:0;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;>'+li+'</ul></div>';
+}
+
+/* Take a saved (user-edited) reco block and refresh only the dynamic numbers/names
+   from the current sheet; add/remove the Already-Exist &amp; Pending lines as per data. */
+function refreshReco(savedHTML, cfgSheet){
+  if(!savedHTML || savedHTML.indexOf('data-dyn')===-1) return buildReco(null, cfgSheet); // old format -> rebuild fresh
+  const v = fetchVals(cfgSheet);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = savedHTML;
+  const map = {cm:v.cm, am:v.am, rnr:v.rnr, svp:v.svp, svd:v.svd, ae:String(v.ae), pend:String(v.pend)};
+  tmp.querySelectorAll('[data-dyn]').forEach(sp=>{
+    const k = sp.getAttribute('data-dyn');
+    if(k in map) sp.textContent = map[k];
+  });
+  const ul = tmp.querySelector('ul');
+  // Already Exist line: remove when 0, add when >0 &amp; missing
+  let ae = tmp.querySelector('[data-line=&quot;ae&quot;]');
+  if(v.ae<=0 &amp;&amp; ae) ae.remove();
+  if(v.ae>0 &amp;&amp; !ae &amp;&amp; ul){ ul.insertAdjacentHTML('beforeend', aeLine(v)); }
+  // Pending line
+  let pe = tmp.querySelector('[data-line=&quot;pend&quot;]');
+  if(v.pend<=0 &amp;&amp; pe) pe.remove();
+  if(v.pend>0 &amp;&amp; !pe &amp;&amp; ul){ ul.insertAdjacentHTML('beforeend', pendLine(v)); }
+  // default size: keep the whole Recommendations block at 11pt
+  const wrap = tmp.querySelector('[data-block=&quot;reco&quot;]');
+  if(wrap){
+    wrap.style.fontSize = '11pt';
+    wrap.querySelectorAll('font[size]').forEach(f=>f.removeAttribute('size'));
+    // explicit sizes (Outlook inherit par bharosa nahi karta): heading 14pt, bullets 11pt
+    wrap.querySelectorAll('p,ul,li').forEach(el=>{
+      el.style.fontSize = (el.tagName==='P' &amp;&amp; (el.hasAttribute('data-rh') || /recommendations/i.test(el.textContent))) ? '14pt' : '11pt';
+      el.style.fontFamily='Calibri,Arial,sans-serif';
+    });
+    wrap.querySelectorAll('span[style],b[style],i[style],u[style]').forEach(el=>{ if(el.style.fontSize) el.style.fontSize='11pt'; });
+    // @tagged persons -> Outlook-jaisa blue (purane saved mentions + user ke type kiye tags dono)
+    wrap.querySelectorAll('b,span,font').forEach(el=>{
+      if(el.textContent.trim().startsWith('@')){ el.style.color='#0078D4'; el.style.fontWeight='bold'; }
+    });
+  }
+  return tmp.innerHTML;
+}
+
+/* ================= mail builder ================= */
+async function buildMail(kind){
+  const cfg = getCfg(kind);
+  const grid = sheets[cfg.sheet];
+  const mailEl = $('mail-'+kind);
+  if(!grid){
+    // sheet not found -> page goes blank by default
+    mailEl.innerHTML = '<div class=&quot;empty&quot;><b>Sheet &quot;'+esc(cfg.sheet)+'&quot; was not found in this file.</b><br>Enter the correct sheet name and click Generate.</div>';
+    await store.set('fms_mail_'+kind, '');
+    await store.del('fms_mail_'+kind);
+    toast('Sheet &quot;'+cfg.sheet+'&quot; not found \u2014 '+(kind==='analysis'?'Analysis':'Source')+' page has been cleared.');
+    return;
+  }
+
+  const note = fetchAcross(cfg.sheet,'Note');
+  // Allocated QL se match: pehle ISI mail ki sheet ka &quot;Allocated QL (%)&quot; (har sheet ka apna QL),
+  // wahan na mile to baaki sheets (Analysis/Master) se fallback — match kabhi miss na ho
+  fetchQLThreshold(cfg.sheet);
+  qlStyleMode = (kind==='source') ? 'text' : 'fill'; // Source: red/black BOLD TEXT; Analysis: solid fills
+  const repDate = cfg.date &amp;&amp; cfg.date.trim() ? cfg.date.trim() : yesterdayStr();
+  const intro = kind==='analysis' ? 'Please find below the feedback analysis report.' : 'Please find below the source wise feedback analysis report.';
+
+  let html = '';
+  const P = 'style=&quot;margin:0 0 8pt;font-family:Calibri,Arial,sans-serif;font-size:11pt&quot;'; // uniform 11pt everywhere
+  html += '<p '+P+'>Hi Team,</p>';
+  html += '<p '+P+'>'+intro+'</p>';
+  if(note){
+    // Note as a KPI-style card (table-based so Outlook/Gmail paste me bhi look bana rahe)
+    html += '<table style=&quot;border-collapse:collapse;table-layout:auto;margin:6pt 0 10pt;width:auto&quot;><tr>'
+          + '<td style=&quot;background:#F2A93B;width:6px;padding:0;border:1px solid #E09420;font-size:1px;line-height:1px&quot;>&amp;nbsp;</td>'
+          + '<td style=&quot;background:#FFF7E6;border:1px solid #F0D9A8;border-left:none;padding:8px 16px 9px 12px;font-family:Calibri,Arial,sans-serif&quot;>'
+          +   '<span style=&quot;font-size:9pt;font-weight:bold;color:#B7791F;letter-spacing:1px&quot;>&amp;#128204; NOTE</span><br>'
+          +   '<span style=&quot;font-size:11pt;color:#3A2A00;font-weight:bold&quot;>'+tagify(esc(note))+'</span>'
+          + '</td></tr></table>';
+  }
+  html += '<p '+P+'><b>Reporting Date:</b> Till '+esc(repDate)+'</p>';
+
+  const used = new Set(); const missing = [];
+  let drrDone = false;
+  const stopNames = cfg.headers.map(x=>norm(x)).filter(Boolean);
+  // Recommendations block is SHARED: source mail shows exactly the same
+  // block as analysis; values are always fetched from the Analysis sheet
+  const recoSheet = sheets[getCfg('analysis').sheet] ? getCfg('analysis').sheet : cfg.sheet;
+  const savedReco = await store.get('fms_reco_analysis');
+  const recoHTML = savedReco ? refreshReco(savedReco, recoSheet) : buildReco(kind, recoSheet);
+
+  cfg.headers.forEach(h=>{
+    if(!h.trim()) return;
+    const pos = findCell(grid, h, used);
+    if(!pos){ missing.push(h); return; }
+    const meta = extractTable(grid, pos.r, pos.c, stopNames);
+    if(!meta){ missing.push(h); return; } // header mila par table nahi -> skip
+    html += heading(h.replace(/[:\-\s]+$/,'')+':');
+    html += tableHTML(meta.rows, norm(h), spansFor(cfg.sheet, meta));
+    if(!drrDone &amp;&amp; /drr|run rate/i.test(h)){ html += recoHTML; drrDone = true; }
+  });
+  if(!drrDone) html += recoHTML;
+
+  mailEl.innerHTML = html;
+  // re-apply user's saved table formatting (colours, bold, sizes, column widths, row heights)
+  try{
+    const rawFmt = await store.get('fms_tblfmt_'+kind);
+    if(rawFmt) applyTableFmt(mailEl, JSON.parse(rawFmt));
+  }catch(e){}
+  await persistMail(kind);
+  if(missing.length) toast('Headers not found: '+missing.join(', '));
+  else toast((kind==='analysis'?'Analysis':'Source')+' mail is ready \u2713'+(qlThreshold!=null?('  |  Allocated QL: '+qlThreshold+'%'):'  |  Allocated QL not found!'));
+}
+
+/* ================= config get/save ================= */
+function getCfg(kind){
+  const p = kind==='analysis'?'a':'s';
+  return {
+    sheet: $(p+'_sheet').value.trim() || DEFAULTS[kind].sheet,
+    date:  $(p+'_date').value,
+    headers: $(p+'_headers').value.split(/\n|,(?=\S{3})/).map(x=>x.trim()).filter(Boolean)
+  };
+}
+let cfgT;
+function saveCfg(){
+  clearTimeout(cfgT);
+  cfgT = setTimeout(()=>{
+    const cfg = {
+      a:{sheet:$('a_sheet').value,date:$('a_date').value,headers:$('a_headers').value},
+      s:{sheet:$('s_sheet').value,date:$('s_date').value,headers:$('s_headers').value}
+    };
+    store.set('fms_cfg', JSON.stringify(cfg));
+  },400);
+}
+
+/* ================= mail persistence (auto-save edits) ================= */
+let mailT = {};
+async function persistMail(kind){
+  const el = $('mail-'+kind);
+  await store.set('fms_mail_'+kind, el.innerHTML);
+  const reco = el.querySelector('[data-block=&quot;reco&quot;]');
+  if(reco) await store.set('fms_reco_analysis', reco.outerHTML); // shared across both tabs
+  const fmt = captureTableFmt(el);
+  await store.set('fms_tblfmt_'+kind, JSON.stringify(fmt));
+}
+['analysis','source'].forEach(kind=>{
+  $('mail-'+kind).addEventListener('input', ()=>{
+    clearTimeout(mailT[kind]);
+    mailT[kind] = setTimeout(()=>persistMail(kind), 600);
+  });
+  // blur par turant save (auto-remember)
+  $('mail-'+kind).addEventListener('blur', ()=>{ clearTimeout(mailT[kind]); persistMail(kind); }, true);
+});
+/* Auto-remember: tab switch / window close par bhi turant save */
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) persistMail(activeTab); });
+window.addEventListener('beforeunload', ()=>{ try{ persistMail(activeTab); }catch(e){} });
+
+/* ================= file load ================= */
+$('btnUpload').onclick = ()=>$('fileInput').click();
+$('fileInput').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf,{type:'array'});
+    sheets = {}; sheetMerges = {}; sheetNames = wb.SheetNames.slice();
+    sheetNames.forEach(n=>{
+      const ws = wb.Sheets[n];
+      sheets[n] = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+      const ref = XLSX.utils.decode_range(ws['!ref']||'A1');
+      sheetMerges[n] = (ws['!merges']||[]).map(m=>({sr:m.s.r-ref.s.r, sc:m.s.c-ref.s.c, er:m.e.r-ref.s.r, ec:m.e.c-ref.s.c}));
+    });
+    fileName = f.name;
+    $('fileName').textContent = fileName;
+    $('fileClear').style.display = 'inline';
+    renderSheetList();
+    // NOTE: file data browser me save NAHI hoti — page refresh par file hat jaati hai,
+    // sirf settings aur mail edits saved rehte hain.
+    await store.del('fms_wb');
+    await buildMail('analysis');
+    await buildMail('source');
+    showTab(activeTab);
+    toast('File loaded: '+fileName);
+  }catch(err){ console.error(err); toast('Could not read the file \u2014 please upload a valid .xlsx / .xlsm file.'); }
+  e.target.value='';
+});
+
+function emptyState(kind){
+  return '<div class=&quot;empty&quot;><b>No file loaded.</b><br>Upload a file, set the sheet name &amp;amp; headers, then click Generate to build the '+(kind==='analysis'?'Analysis':'Source Wise')+' mail.</div>';
+}
+/* remove file via cross on the chip */
+function clearFile(){
+  sheets = {}; sheetMerges = {}; sheetNames = []; fileName = '';
+  $('fileName').textContent = 'No file loaded';
+  $('fileClear').style.display = 'none';
+  renderSheetList();
+  store.del('fms_wb');
+  $('mail-analysis').innerHTML = emptyState('analysis');
+  $('mail-source').innerHTML = emptyState('source');
+  toast('File removed \u2014 upload a new file to continue.');
+}
+$('fileClear').onclick = clearFile;
+
+function renderSheetList(){
+  const html = sheetNames.length? sheetNames.map(n=>'&amp;#9632; '+esc(n)).join('<br>') : '&amp;mdash;';
+  $('sheetList').innerHTML = html; $('sheetList2').innerHTML = html;
+}
+
+/* ================= refresh / generate / reset ================= */
+$('btnRefresh').onclick = ()=>{ if(!sheetNames.length){toast('No file loaded.');return;} clearFile(); };
+$('a_gen').onclick = ()=>buildMail('analysis');
+$('s_gen').onclick = ()=>buildMail('source');
+$('a_resetReco').onclick = async ()=>{ await store.del('fms_reco_analysis'); await buildMail('analysis'); toast('Recommendations reset to auto mode.'); };
+$('s_resetReco').onclick = async ()=>{ await store.del('fms_reco_analysis'); await buildMail('source'); toast('Recommendations reset to auto mode.'); };
+
+/* ================= tabs ================= */
+function showTab(t){
+  activeTab = t;
+  $('tabA').classList.toggle('active', t==='analysis');
+  $('tabS').classList.toggle('active', t==='source');
+  $('cfg-analysis').classList.toggle('hidden', t!=='analysis');
+  $('cfg-source').classList.toggle('hidden', t!=='source');
+  $('mail-analysis').classList.toggle('hidden', t!=='analysis');
+  $('mail-source').classList.toggle('hidden', t!=='source');
+  store.set('fms_tab', t);
+}
+$('tabA').onclick = ()=>showTab('analysis');
+$('tabS').onclick = ()=>showTab('source');
+
+/* ================= toolbar ================= */
+document.querySelectorAll('.tbtn').forEach(b=>{
+  b.addEventListener('mousedown', e=>e.preventDefault()); // keep selection
+  b.addEventListener('click', ()=>{ document.execCommand(b.dataset.cmd,false,null); persistMail(activeTab); });
+});
+$('fontSize').addEventListener('change', e=>{ if(e.target.value){ document.execCommand('fontSize',false,e.target.value); persistMail(activeTab); e.target.value=''; }});
+$('foreColor').addEventListener('input', e=>{ document.execCommand('foreColor',false,e.target.value); persistMail(activeTab); });
+$('hiliteColor').addEventListener('input', e=>{ document.execCommand('hiliteColor',false,e.target.value); persistMail(activeTab); });
+
+/* ================= excel-like resize (columns &amp; rows) ================= */
+let drag = null;
+document.addEventListener('mousedown', e=>{
+  const col = e.target.closest &amp;&amp; e.target.closest('.rz-col');
+  const rowH = e.target.closest &amp;&amp; e.target.closest('.rz-row');
+  if(!col &amp;&amp; !rowH) return;
+  e.preventDefault(); e.stopPropagation();
+  const td = (col||rowH).parentElement;
+  const table = td.closest('table');
+  freeze(table);
+  if(col){
+    const idx = Array.from(td.parentElement.children).indexOf(td);
+    const colEl = table.querySelectorAll('col')[idx];
+    drag = {type:'col', el:colEl, startX:e.clientX, startW:colEl ? parseFloat(colEl.style.width)||td.offsetWidth : td.offsetWidth, td};
+  } else {
+    const tr = td.parentElement;
+    drag = {type:'row', el:tr, startY:e.clientY, startH:tr.offsetHeight};
+  }
+  document.body.style.cursor = col?'col-resize':'row-resize';
+  document.body.style.userSelect='none';
+});
+document.addEventListener('mousemove', e=>{
+  if(!drag) return;
+  if(drag.type==='col'){
+    const w = Math.max(28, drag.startW + (e.clientX-drag.startX));
+    if(drag.el) drag.el.style.width = w+'px'; else drag.td.style.width = w+'px';
+  } else {
+    const h = Math.max(18, drag.startH + (e.clientY-drag.startY));
+    drag.el.style.height = h+'px';
+    Array.from(drag.el.children).forEach(c=>c.style.height=h+'px');
+  }
+});
+document.addEventListener('mouseup', ()=>{ if(drag){ drag=null; document.body.style.cursor=''; document.body.style.userSelect=''; persistMail(activeTab); } });
+
+function freeze(table){
+  if(table.dataset.frozen) return;
+  let cg = table.querySelector('colgroup');
+  const firstRow = table.querySelector('tr');
+  if(!firstRow) return;
+  const cells = firstRow.children;
+  if(!cg){ cg=document.createElement('colgroup'); for(let i=0;i<cells.length;i++) cg.appendChild(document.createElement('col')); table.insertBefore(cg, table.firstChild); }
+  const cols = cg.querySelectorAll('col');
+  for(let i=0;i<cols.length &amp;&amp; i<cells.length;i++){ cols[i].style.width = cells[i].offsetWidth+'px'; }
+  table.style.tableLayout='fixed';
+  table.dataset.frozen='1';
+}
+
+/* ================= copy mail (rich HTML for Outlook/Gmail) ================= */
+$('btnCopy').onclick = async ()=>{
+  const el = $('mail-'+activeTab);
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll('.rz-col,.rz-row').forEach(n=>n.remove());
+  clone.querySelectorAll('[contenteditable]').forEach(n=>n.removeAttribute('contenteditable'));
+  const html = '<div style=&quot;font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000&quot;>'+clone.innerHTML+'</div>';
+  const text = clone.innerText;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html],{type:'text/html'}),
+      'text/plain': new Blob([text],{type:'text/plain'})
+    })]);
+    toast('Mail copied \u2014 paste it into Outlook / Gmail \u2713');
+  }catch(err){
+    // fallback: select &amp; copy
+    const range = document.createRange(); range.selectNodeContents(el);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy'); sel.removeAllRanges();
+    toast('Mail copied \u2713');
+  }
+};
+
+/* ================= boot: restore everything ================= */
+(async function boot(){
+  // config
+  const rawCfg = await store.get('fms_cfg');
+  if(rawCfg){ try{
+    const c = JSON.parse(rawCfg);
+    $('a_sheet').value=c.a.sheet||''; $('a_date').value=c.a.date||''; $('a_headers').value=c.a.headers||'';
+    $('s_sheet').value=c.s.sheet||''; $('s_date').value=c.s.date||''; $('s_headers').value=c.s.headers||'';
+  }catch(e){} }
+  if(!$('a_sheet').value) $('a_sheet').value = DEFAULTS.analysis.sheet;
+  if(!$('s_sheet').value) $('s_sheet').value = DEFAULTS.source.sheet;
+  if(!$('a_headers').value) $('a_headers').value = DEFAULTS.analysis.headers.join('\n');
+  if(!$('s_headers').value) $('s_headers').value = DEFAULTS.source.headers.join('\n');
+  ['a_sheet','a_date','a_headers','s_sheet','s_date','s_headers'].forEach(id=>$(id).addEventListener('input',saveCfg));
+
+  // workbook data intentionally NOT restored: page refresh par sirf file hat jaati hai
+  await store.del('fms_wb');
+
+  // Mail bodies are NOT restored without a file: pages stay blank until upload.
+  // (Recommendation edits &amp; all settings remain saved and are re-applied on Generate.)
+  const t = await store.get('fms_tab');
+  showTab(t==='source'?'source':'analysis');
+})();
+</script>
+</body>
+</html>
+"></iframe>
+  </div>
+
   <!-- Admin Access Panel (sirf Main Admin ko dikhega) -->
   <div id="tabAccess" class="admin-insights-panel">
     <div style="margin-bottom:1.25rem">
@@ -894,16 +2000,23 @@
     </div>
 
     <div class="access-grant-card">
-      <div style="font-size:13px;font-weight:700;color:#0f2a4a;margin-bottom:8px;font-family:'Calibri',sans-serif">Enter 📩email for Grant Admin Access</div>
+      <div style="font-size:13px;font-weight:700;color:#0f2a4a;margin-bottom:8px;font-family:'Calibri',sans-serif">Enter 📩 email to grant Admin Access</div>
       <div class="access-grant-row">
         <input type="text" id="grantEmailInput" placeholder="e.g. Username@aurumanalytica.in"
           style="flex:1;min-width:200px;padding:9px 13px;font-size:13.5px;font-family:'Calibri',sans-serif;font-weight:500;color:var(--text,#0f2a4a);background:#f4f6fb;border:1.5px solid #dbe4f0;border-radius:10px;outline:none"
           onkeydown="if(event.key==='Enter')grantAdminAccess()" />
+        <select id="grantPermsSel" title="Select which tabs this user can access"
+          style="padding:9px 10px;font-size:12.5px;font-family:'Calibri',sans-serif;font-weight:600;color:#0f2a4a;background:#f4f6fb;border:1.5px solid #dbe4f0;border-radius:10px;outline:none;cursor:pointer">
+          <option value="both" selected>Both (Insights + Formatting)</option>
+          <option value="insights">User Insights only</option>
+          <option value="formatting">Formatting Mail only</option>
+        </select>
         <button onclick="grantAdminAccess()"
           style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0d4a84;transition:transform .15s;white-space:nowrap"
           onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">+ Grant Access</button>
       </div>
       <div id="grantMsg" style="font-size:12px;margin-top:8px;font-weight:600;font-family:'Calibri',sans-serif"></div>
+      <div id="permSyncStatus" style="font-size:12px;margin-top:6px;font-weight:700;font-family:'Calibri',sans-serif"></div>
     </div>
 
     <div class="user-table-card">
@@ -923,10 +2036,11 @@
             <th>Admin (Email)</th>
             <th>Type</th>
             <th>Access Given On</th>
+            <th style="width:210px">Tab Access</th>
             <th style="width:110px">Action</th>
           </tr></thead>
           <tbody id="accessListBody">
-            <tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7a9a">Loading...</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -982,6 +2096,129 @@ function isAdminEmail(email){
 function isSuperAdmin(email){
   return String(email||'').trim().toLowerCase() === SUPER_ADMIN;
 }
+// ── Tab-level access: 'insights' | 'formatting' | 'both' | 'none' (default 'both') ──
+// Main Admin hamesha sab dekhta hai; baaki admins ko jo perms di gayi hain wahi tabs dikhte hain.
+function getAdminPermsMap(){
+  try{ return JSON.parse(localStorage.getItem('aurumAdminPerms')||'{}'); }catch(e){ return {}; }
+}
+function getAdminPerms(email){
+  email = String(email||'').trim().toLowerCase();
+  if (isSuperAdmin(email)) return 'both';
+  return getAdminPermsMap()[email] || 'both';
+}
+function setAdminPerms(email, perms){
+  email = String(email||'').trim().toLowerCase();
+  if (isSuperAdmin(email)) return; // Main Admin locked
+  const map = getAdminPermsMap();
+  map[email] = perms;
+  localStorage.setItem('aurumAdminPerms', JSON.stringify(map));
+  // server par save + VERIFY (sab devices par tabhi lagega jab server save ho)
+  permStatus('⏳ Saving to server...', '#6b7a9a');
+  pushPermsToServer(email, perms).then(ok => {
+    if (ok) permStatus('🟢 Saved — ' + email + ' will now see these tabs on all devices', '#1e7e44');
+    else permStatus('🔴 Could not save on server! Deploy the updated Apps Script: Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy', '#c0392b');
+  });
+  // agar wahi user isi browser me logged-in hai to tabs turant update ho jayen
+  const cur = (localStorage.getItem('aurumUser')||'').trim().toLowerCase();
+  if (cur === email) applyTabPerms(cur, isAdminEmail(cur));
+}
+function permStatus(msg, color){
+  const el = document.getElementById('permSyncStatus');
+  if (el){ el.textContent = msg; el.style.color = color; }
+}
+function clearAdminPerms(email){
+  email = String(email||'').trim().toLowerCase();
+  const map = getAdminPermsMap();
+  if (map[email] !== undefined){ delete map[email]; localStorage.setItem('aurumAdminPerms', JSON.stringify(map)); }
+  pushPermsToServer(email, ''); // server se bhi hatao (best-effort)
+}
+// ── Perms server sync (Apps Script me 'get-perms'/'set-perms' actions chahiye) ──
+async function syncPermsFromServer(){
+  try{
+    const res = await fetch(OTP_SERVER_URL + '?action=get-perms&t=' + Date.now(), { method:'GET' });
+    const data = await res.json();
+    if (data && data.perms && typeof data.perms === 'object'){
+      localStorage.setItem('aurumAdminPerms', JSON.stringify(data.perms));
+      return true;
+    }
+  }catch(e){}
+  return false; // server purana hai (Unknown action) ya network fail
+}
+async function pushPermsToServer(email, perms){
+  try{
+    const res = await fetch(OTP_SERVER_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'set-perms', email, perms, at:new Date().toISOString(), by: localStorage.getItem('aurumUser')||'' })
+    });
+    const data = await res.json();
+    return !!(data && data.success);
+  }catch(e){ return false; }
+}
+// Tabs ki visibility perms ke hisaab se (show hote hi 3D pop-in animation)
+function applyTabPerms(email, isAdmin){
+  const p = getAdminPerms(email);
+  const setTab = (el, show) => {
+    if (!el) return;
+    const was = el.style.display !== 'none';
+    el.style.display = show ? 'flex' : 'none';
+    if (show && !was){ el.classList.remove('tab-pop'); void el.offsetWidth; el.classList.add('tab-pop'); }
+  };
+  const insightsTab = document.getElementById('tab-insights');
+  const fmtTab = document.getElementById('tab-formatting');
+  setTab(insightsTab, isAdmin && (p==='both'||p==='insights'));
+  setTab(fmtTab, isAdmin && (p==='both'||p==='formatting'));
+  // agar user abhi aise tab par khada hai jo ab hidden hai -> dashboard par bhej do
+  const insHidden = insightsTab && insightsTab.style.display==='none' && insightsTab.classList.contains('active');
+  const fmtHidden = fmtTab && fmtTab.style.display==='none' && fmtTab.classList.contains('active');
+  if (insHidden || fmtHidden) switchTab('dashboard');
+}
+// ── Tab Access UI: chhote access-cards (chips) + tick-box popover ──
+function permChips(p){
+  const chip = (t,bg,tx,bd)=>'<span style="background:'+bg+';color:'+tx+';border:1px solid '+bd+';border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap">'+t+'</span>';
+  if (p==='both') return chip('📊 Insights','#e8f1fb','#185FA5','#c7dcf2') + ' ' + chip('✉️ Formatting','#e9f7ee','#1e7e44','#bfe6cd');
+  if (p==='insights') return chip('📊 Insights','#e8f1fb','#185FA5','#c7dcf2');
+  if (p==='formatting') return chip('✉️ Formatting','#e9f7ee','#1e7e44','#bfe6cd');
+  return chip('Dashboard only','#f1f3f8','#6b7a9a','#dbe4f0');
+}
+function permsCellHTML(em, safeEm, locked){
+  if (locked) return '<td><span style="font-size:12px;color:#9aa7bd;font-weight:700">👑 All tabs (Locked)</span></td>';
+  const p = getAdminPerms(em);
+  return '<td><div class="perm-cell" data-email="'+safeEm+'" style="position:relative">'
+    + '<button type="button" onclick="togglePermPop(this)" '
+    + 'style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 9px;background:#f4f6fb;border:1.5px solid #dbe4f0;border-radius:8px;cursor:pointer;font-family:\'Calibri\',sans-serif">'
+    + '<span class="perm-chips" style="display:flex;gap:4px;flex-wrap:wrap">'+permChips(p)+'</span>'
+    + '<span style="font-size:10px;color:#6b7a9a">▼</span></button>'
+    + '<div class="perm-pop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:#fff;border:1.5px solid #dbe4f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,42,74,.15);padding:8px 10px;min-width:190px">'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;font-weight:600;color:#0f2a4a;font-family:\'Calibri\',sans-serif;cursor:pointer"><input type="checkbox" data-perm="insights" '+((p==='both'||p==='insights')?'checked':'')+' onchange="onPermTick(this)"> 📊 User Insights</label>'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;font-weight:600;color:#0f2a4a;font-family:\'Calibri\',sans-serif;cursor:pointer"><input type="checkbox" data-perm="formatting" '+((p==='both'||p==='formatting')?'checked':'')+' onchange="onPermTick(this)"> ✉️ Formatting Mail</label>'
+    + '</div></div></td>';
+}
+function togglePermPop(btn){
+  const pop = btn.parentElement.querySelector('.perm-pop');
+  const open = pop.style.display !== 'none';
+  document.querySelectorAll('.perm-pop').forEach(pp => pp.style.display = 'none');
+  if (open) return;
+  // fixed positioning — table ke overflow/scroll me clip na ho
+  const r = btn.getBoundingClientRect();
+  pop.style.position = 'fixed';
+  pop.style.top = (r.bottom + 4) + 'px';
+  pop.style.left = r.left + 'px';
+  pop.style.minWidth = Math.max(190, r.width) + 'px';
+  pop.style.display = 'block';
+}
+function onPermTick(cb){
+  const cell = cb.closest('.perm-cell');
+  const email = cell.getAttribute('data-email');
+  const ins = cell.querySelector('input[data-perm="insights"]').checked;
+  const fmt = cell.querySelector('input[data-perm="formatting"]').checked;
+  const p = (ins && fmt) ? 'both' : ins ? 'insights' : fmt ? 'formatting' : 'none';
+  setAdminPerms(email, p);
+  const chips = cell.querySelector('.perm-chips');
+  if (chips) chips.innerHTML = permChips(p);
+}
+// popover bahar click par band
+document.addEventListener('click', (e)=>{
+  if (!e.target.closest('.perm-cell')) document.querySelectorAll('.perm-pop').forEach(pp => pp.style.display='none');
+});
 // Best-effort central sync — agar Apps Script me 'get-admins' action ho to sab devices par sync rahega
 async function syncAdminsFromServer(){
   try{
@@ -1191,13 +2428,26 @@ function launchDashboard(email, isAdmin) {
   // Tab bar sab logged-in users ko dikhega (logout button right side me hai)
   document.getElementById('adminTabBar').classList.add('show');
   document.getElementById('adminTabBar').style.display = 'flex';
-  // User Insights tab — sirf admin ko
-  const insightsTab = document.getElementById('tab-insights');
-  if (insightsTab) insightsTab.style.display = isAdmin ? 'flex' : 'none';
+  // ── TAB ACCESS (server-driven, INSTANT show) ──
+  // localStorage me server ki LAST-SYNCED perms hoti hain -> refresh par tabs TURANT dikhao,
+  // phir background me server se fresh perms laakar silently re-apply (koi wait nahi).
+  applyTabPerms(email, isAdmin);
+  syncPermsFromServer().then(ok => {
+    applyTabPerms(email, isAdmin);
+    if (!ok) console.warn('[TabAccess] Server se perms nahi mili — cached perms use ho rahi hain.');
+  });
 
   // Admin Access tab — sirf Main Admin (SUPER_ADMIN) ko
+  // sab tabs par 3D pop-in (Dashboard hamesha, Access sirf Main Admin ko)
+  const popTab = (el) => { if(!el) return; el.classList.remove('tab-pop'); void el.offsetWidth; el.classList.add('tab-pop'); };
+  popTab(document.getElementById('tab-dashboard'));
   const accessTab = document.getElementById('tab-access');
-  if (accessTab) accessTab.style.display = isSuperAdmin(email) ? 'flex' : 'none';
+  if (accessTab){
+    const showA = isSuperAdmin(email);
+    const wasA = accessTab.style.display !== 'none';
+    accessTab.style.display = showA ? 'flex' : 'none';
+    if (showA && !wasA) popTab(accessTab);
+  }
   
   // Show logout button
   const lb = document.getElementById('logoutBtn');
@@ -1257,9 +2507,13 @@ function logoutUser() {
 function switchTab(tab) {
   document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
   document.getElementById('tab-insights').classList.toggle('active', tab==='insights');
+  const tf = document.getElementById('tab-formatting');
+  if (tf) tf.classList.toggle('active', tab==='formatting');
   const ta = document.getElementById('tab-access');
   if (ta) ta.classList.toggle('active', tab==='access');
   document.getElementById('tabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
+  const fp = document.getElementById('tabFormatting');
+  if (fp) fp.style.display = tab==='formatting' ? 'block' : 'none';
   document.getElementById('tabInsights').style.display = tab==='insights' ? 'block' : 'none';
   document.getElementById('tabInsights').classList.toggle('show', tab==='insights');
   const ap = document.getElementById('tabAccess');
@@ -1285,10 +2539,12 @@ async function renderAccessPanel(){
   if (getGrantedAdminRecords().length || ADMIN_EMAILS.length) {
     renderAccessRows();
   } else {
-    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7a9a">⏳ Loading from server...</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">⏳ Loading from server...</td></tr>';
   }
-  // 2) BACKGROUND: server (Google Sheet) se fresh list — aate hi chupchap update
-  await syncAdminsFromServer();
+  // 2) BACKGROUND: server (Google Sheet) se fresh list + perms — aate hi chupchap update
+  const [, permsOk] = await Promise.all([syncAdminsFromServer(), syncPermsFromServer()]);
+  if (permsOk) permStatus('🟢 Tab Access synced with server — settings will apply on all devices', '#1e7e44');
+  else permStatus('🔴 Tab-Access support not found on server — deploy the updated Apps Script (Deploy → Manage deployments → ✏️ Edit → New version → Deploy). Until then, settings work only in this browser.', '#c0392b');
   renderAccessRows();
 }
 
@@ -1299,6 +2555,8 @@ function renderAccessRows(){
   const granted = getGrantedAdminRecords().filter(r => !ADMIN_EMAILS.includes(r.email) && !removed.includes(r.email));
   let html = '';
   // Main Admin row — locked, checkbox disabled
+  // Tab Access — chhote access-cards + tick-box popover (Main Admin locked)
+  const permsCell = (em, safeEm, locked) => permsCellHTML(em, safeEm, locked);
   ADMIN_EMAILS.filter(e => !removed.includes(e)).forEach(e => {
     const c = userChipColor(e);
     const isMain = e === SUPER_ADMIN;
@@ -1307,10 +2565,11 @@ function renderAccessRows(){
       ? '<span style="font-size:12px;color:#9aa7bd">🔒 Locked</span>'
       : `<button onclick="revokeAdminAccess('${safe}')" style="background:#fde8e8;color:#c0392b;border:1px solid #f5c6c1;border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer">✕ Remove</button>`;
     html += `<tr>
-      <td style="text-align:center"><input type="checkbox" class="del-checkbox" disabled title="Main Admin remove nahi ho sakta"></td>
+      <td style="text-align:center"><input type="checkbox" class="del-checkbox" disabled title="Main Admin cannot be removed"></td>
       <td><span class="user-chip" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}">${e}</span></td>
       <td><span class="activity-badge ${isMain?'high':'mid'}">${isMain?'👑 Main Admin':'Built-in'}</span></td>
       <td style="font-size:12px;color:#6b7a9a">—</td>
+      ${permsCell(e, safe, isMain)}
       <td>${action}</td>
     </tr>`;
   });
@@ -1322,10 +2581,11 @@ function renderAccessRows(){
       <td><span class="user-chip" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}">${r.email}</span></td>
       <td><span class="activity-badge low">Granted</span></td>
       <td style="font-size:12px;color:#6b7a9a">${fmtGrantTime(r.at)}</td>
+      ${permsCell(r.email, safe, false)}
       <td><button onclick="revokeAdminAccess('${safe}')" style="background:#fde8e8;color:#c0392b;border:1px solid #f5c6c1;border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;font-family:'Calibri',sans-serif;cursor:pointer">✕ Remove</button></td>
     </tr>`;
   });
-  body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7a9a">No admins.</td></tr>';
+  body.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7a9a">No admins.</td></tr>';
   clearAccessSelection();
 }
 
@@ -1361,9 +2621,9 @@ async function removeSelectedAccess(){
   if (!checked.length) return;
   if (!confirm('Remove admin access for ' + checked.length + ' admin' + (checked.length>1?'s':'') + '?\n\n' + checked.join('\n'))) return;
   const msg = document.getElementById('grantMsg');
-  if (msg) { msg.style.color = '#6b7a9a'; msg.textContent = '⏳ Server se remove ho raha hai...'; }
+  if (msg) { msg.style.color = '#6b7a9a'; msg.textContent = '⏳ Removing from the server...'; }
   await Promise.all(checked.map(email => doRevoke(email)));
-  if (msg) { msg.style.color = '#b06a00'; msg.textContent = '✕ ' + checked.length + ' admin' + (checked.length>1?'s':'') + ' ka access hata diya — Google Sheet se bhi removed.'; }
+  if (msg) { msg.style.color = '#b06a00'; msg.textContent = '✕ Removed access for ' + checked.length + ' admin' + (checked.length>1?'s':'') + ' — also removed from the Google Sheet.'; }
   renderAccessPanel(); // server se fresh list
 }
 
@@ -1372,15 +2632,18 @@ async function grantAdminAccess(){
   const msg = document.getElementById('grantMsg');
   let email = inp.value.trim().toLowerCase();
   msg.style.color = '#c0392b';
-  if (!email) { msg.textContent = 'Please enter mail id'; return; }
+  if (!email) { msg.textContent = 'Pehle email daalo.'; return; }
   if (!email.includes('@')) email = email + '@' + ALLOWED_DOMAIN; 
-  if (!email.endsWith('@' + ALLOWED_DOMAIN)) { msg.textContent = 'Sirf @' + ALLOWED_DOMAIN + ' emails ko access de sakte ho.'; return; }
-  if (isAdminEmail(email)) { msg.textContent = email + ' You have Already An access of dashboard.'; return; }
+  if (!email.endsWith('@' + ALLOWED_DOMAIN)) { msg.textContent = 'Only @' + ALLOWED_DOMAIN + ' email addresses can be granted access.'; return; }
+  if (isAdminEmail(email)) { msg.textContent = email + ' already has dashboard access.'; return; }
   // Agar pehle remove kiya tha, to restore
   const removed = getRemovedAdmins();
   if (removed.includes(email)) {
     saveRemovedAdmins(removed.filter(e => e !== email));
   }
+  // Dropdown se chuna gaya tab-access save karo (Both / Insights only / Formatting only)
+  const permsSel = document.getElementById('grantPermsSel');
+  setAdminPerms(email, permsSel ? permsSel.value : 'both');
   inp.value = '';
   // Pehle SERVER par save karo (source of truth), phir fresh list render karo
   msg.style.color = '#6b7a9a';
@@ -1388,7 +2651,7 @@ async function grantAdminAccess(){
   const resp = await pushAdminChangeToServer('grant-admin', email);
   if (resp && resp.success) {
     msg.style.color = '#1e7e44';
-    msg.textContent = '✔ ' + email + 'Admin access granted. ✅';
+    msg.textContent = '✔ Admin access granted to ' + email + ' ✅';
   } else {
     
     if (!ADMIN_EMAILS.includes(email)) {
@@ -1397,7 +2660,7 @@ async function grantAdminAccess(){
       saveGrantedAdminRecords(records);
     }
     msg.style.color = '#c0392b';
-    msg.textContent = '⚠ Server par save fail hua' + (resp && resp.message ? ': "' + resp.message + '"' : '') + ' — sirf is browser me saved. (Apps Script deployment / internet check karo)';
+    msg.textContent = '⚠ Failed to save on the server' + (resp && resp.message ? ': "' + resp.message + '"' : '') + ' — saved only in this browser. (Check the Apps Script deployment / internet)';
     renderAccessRows();
     return;
   }
@@ -1408,6 +2671,7 @@ async function grantAdminAccess(){
 function doRevoke(email){
   email = String(email||'').trim().toLowerCase();
   if (email === SUPER_ADMIN) return Promise.resolve(null);
+  clearAdminPerms(email); // tab-access perms bhi hatao
   saveGrantedAdminRecords(getGrantedAdminRecords().filter(r => r.email !== email));
   if (ADMIN_EMAILS.includes(email)) {
     const removed = getRemovedAdmins();
@@ -1431,7 +2695,7 @@ async function revokeAdminAccess(email){
     msg.textContent = '✕ ' + email + ' Admin access removed successfully. Changes have been synced with the server';
   } else {
     msg.style.color = '#c0392b';
-    msg.textContent = '⚠ Admin access removed locally, but failed to remove it from the server. ✅' + (resp && resp.message ? ': "' + resp.message + '"' : '') + '. Apps Script deployment check karo.';
+    msg.textContent = '⚠ Admin access removed locally, but failed to remove it from the server' + (resp && resp.message ? ': "' + resp.message + '"' : '') + '. Check the Apps Script deployment.';
   }
 }
 
