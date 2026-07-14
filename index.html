@@ -977,7 +977,7 @@
   .cfg .hint{font-size:11px;color:#7C8B99;margin-top:4px}
   .cfgbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   /* ---------- toolbar ---------- */
-  .toolbar{position:sticky;top:52px;z-index:40;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:10px;box-shadow:0 2px 6px rgba(18,43,58,.08)}
+  .toolbar{position:sticky;top:var(--frozenH, 94px);z-index:40;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:10px;box-shadow:0 2px 6px rgba(18,43,58,.08)}
   .tbtn{min-width:30px;height:30px;border:1px solid transparent;background:transparent;border-radius:5px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
   .tbtn:hover{background:#EDF3F0;border-color:#CFE0DA}
   .tsep{width:1px;height:22px;background:var(--line);margin:0 4px}
@@ -1880,6 +1880,17 @@ function showTab(t){
 }
 $('tabA').onclick = ()=>showTab('analysis');
 $('tabS').onclick = ()=>showTab('source');
+
+/* ---- toolbar ko frozen panel ke JUST NICHE freeze rakho ----
+   frozen-head (top bar + tabs) ki live height naap kar sticky offset set hota hai,
+   taaki resize/wrap hone par bhi toolbar hamesha uske theek niche chipka rahe. */
+function setFrozenOffset(){
+  const fh = document.querySelector('.frozen-head');
+  if(fh) document.documentElement.style.setProperty('--frozenH', fh.offsetHeight + 'px');
+}
+window.addEventListener('load', setFrozenOffset);
+window.addEventListener('resize', setFrozenOffset);
+setFrozenOffset();
 
 /* ================= toolbar ================= */
 document.querySelectorAll('.tbtn').forEach(b=>{
