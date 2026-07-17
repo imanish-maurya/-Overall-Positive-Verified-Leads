@@ -1431,6 +1431,7 @@ function tableHTML(rows, tkey, spans){
   }
   /* ===== Reporting Summary: KPI rows PINK bold; &quot;Lead's Duplicate In LMS (Removed)&quot; RED bold ===== */
   const isSummaryTbl = (tkey||'').indexOf('summary')>-1;
+  const isReportingSummary = (tkey||'').indexOf('reporting summary')>-1; // sirf Analysis mail ki Reporting Summary
   function isDupLMSLabel(s){ const n = norm(s); return n.indexOf('duplicate in lms')>-1 &amp;&amp; n.indexOf('removed')>-1; }
   function isPinkLabel(s){
     const n = norm(s);
@@ -1515,7 +1516,8 @@ function tableHTML(rows, tkey, spans){
         st += 'color:#FF0000;font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
       }
       else if(isSummaryTbl &amp;&amp; !dead &amp;&amp; ci<hiLimit &amp;&amp; !hdrRows.has(ri) &amp;&amp; isPinkLabel(row[0])){
-        st += 'color:#000000;' + (centre?'text-align:center;':'text-align:left;');
+        if(isReportingSummary) st += 'color:#FF00FF;font-weight:bold;' + (centre?'text-align:center;':'text-align:left;');
+        else st += 'color:#000000;' + (centre?'text-align:center;':'text-align:left;');
       }
       else if(isGreenRow &amp;&amp; !dead &amp;&amp; ci<hiLimit) st += CLR.green + (centre?'text-align:center;':'text-align:left;');
       else if(theme==='drr' &amp;&amp; ci>0 &amp;&amp; norm(cell)==='on track') st += CLR.green+'text-align:center;';
