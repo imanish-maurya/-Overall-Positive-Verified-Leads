@@ -1728,11 +1728,11 @@ async function buildMail(kind){
   html += '<p '+P+'>'+intro+'</p>';
   if(note){
     // Note as a KPI-style card (table-based so Outlook/Gmail paste me bhi look bana rahe)
-    html += '<table style=&quot;border-collapse:collapse;table-layout:auto;margin:6pt 0 10pt;width:auto&quot;><tr>'
-          + '<td style=&quot;background:#F2A93B;width:6px;padding:0;border:1px solid #E09420;font-size:1px;line-height:1px&quot;>&amp;nbsp;</td>'
-          + '<td style=&quot;background:#FFF7E6;border:1px solid #F0D9A8;border-left:none;padding:8px 16px 9px 12px;font-family:Calibri,Arial,sans-serif&quot;>'
-          +   '<span style=&quot;font-size:9pt;font-weight:bold;color:#B7791F;letter-spacing:1px&quot;>&amp;#128204; NOTE</span><br>'
-          +   '<span style=&quot;font-size:11pt;color:#3A2A00;font-weight:bold&quot;>'+tagify(esc(note))+'</span>'
+    html += '<table style=&quot;border-collapse:separate;border-spacing:0;table-layout:auto;margin:6pt 0 10pt;width:auto&quot;><tr>'
+          + '<td style=&quot;background:#185FA5;width:6px;padding:0;border:1px solid #0d4a84;border-right:none;border-radius:6px 0 0 6px;font-size:1px;line-height:1px&quot;>&amp;nbsp;</td>'
+          + '<td style=&quot;background:#EAF2FB;border:1px solid #BBD6F0;border-left:none;border-radius:0 6px 6px 0;padding:8px 16px 9px 12px;font-family:Calibri,Arial,sans-serif&quot;>'
+          +   '<span style=&quot;font-size:9pt;font-weight:bold;color:#185FA5;letter-spacing:1px&quot;>&amp;#128204; NOTE</span><br>'
+          +   '<span style=&quot;font-size:11pt;color:#0f2a4a;font-weight:bold&quot;>'+tagify(esc(note))+'</span>'
           + '</td></tr></table>';
   }
   html += '<p '+P+'><b>Reporting Date:</b> Till '+esc(repDate)+'</p>';
@@ -2111,6 +2111,73 @@ function isSuperAdmin(email){
 }
 // ── Tab-level access: 'insights' | 'formatting' | 'both' | 'none' (default 'both') ──
 // Main Admin hamesha sab dekhta hai; baaki admins ko jo perms di gayi hain wahi tabs dikhte hain.
+
+/* ══════════════════ ADMIN TAB REGISTRY ══════════════════
+   ➕ NAYA ADMIN TAB ADD KARNA HO TO SIRF YE 2 KAAM KARO:
+   1) Body me section banao:  <div id="tabMyNewTab" style="display:none">...content...</div>
+   2) Neeche registry me ek entry add karo, e.g.:
+      { key:'mynewtab', label:'My New Tab', chipLabel:'MyTab', emoji:'🧩',
+        btnId:'tab-mynewtab', sectionId:'tabMyNewTab',
+        icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/></svg>',
+        onOpen:null }
+   Bas! Tab button, permission checkbox, chips, grant-dropdown option —
+   sab automatically ban jayega, aur wahi user dekhega jise permission hogi. */
+const ADMIN_TABS = [
+  { key:'formatting', label:'Formatting Mail', chipLabel:'Formatting', emoji:'✉️',
+    chipBg:'#e9f7ee', chipTx:'#1e7e44', chipBd:'#bfe6cd',
+    btnId:'tab-formatting', sectionId:'tabFormatting',
+    icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+    onOpen:null },
+  { key:'insights', label:'User Insights', chipLabel:'Insights', emoji:'📊',
+    chipBg:'#e8f1fb', chipTx:'#185FA5', chipBd:'#c7dcf2',
+    btnId:'tab-insights', sectionId:'tabInsights',
+    icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    onOpen:function(){ if (typeof loadInsights==='function') loadInsights(); } },
+  // ➕ FUTURE TABS: yahan add karo…
+];
+// default chip colors (agar entry me colors na diye ho)
+const PERM_CHIP_DEFAULT = { chipBg:'#eef1f5', chipTx:'#0f2a4a', chipBd:'#dbe4f0' };
+
+// perm string ('both' | 'none' | 'insights' | 'formatting' | 'key1,key2,...') -> Set of allowed tab keys
+function permsToSet(p){
+  p = String(p==null ? 'both' : p).trim().toLowerCase();
+  if (p==='' || p==='both' || p==='all') return new Set(ADMIN_TABS.map(t=>t.key));
+  if (p==='none') return new Set();
+  return new Set(p.split(',').map(s=>s.trim()).filter(Boolean));
+}
+// allowed keys -> canonical perm string (purane format se compatible)
+function keysToPermString(keys){
+  const all = ADMIN_TABS.map(t=>t.key);
+  const set = (keys||[]).filter(k=>all.indexOf(k)>-1);
+  if (!set.length) return 'none';
+  if (set.length===all.length) return 'both';
+  if (set.length===1 && (set[0]==='insights'||set[0]==='formatting')) return set[0];
+  return set.join(',');
+}
+// Registry ke buttons agar HTML me nahi hain to auto-create karo (tab-access se pehle),
+// aur grant-dropdown ke options bhi registry se rebuild karo
+function ensureAdminTabButtons(){
+  const bar = document.getElementById('adminTabBar');
+  if (!bar) return;
+  const accessBtn = document.getElementById('tab-access');
+  ADMIN_TABS.forEach(t=>{
+    if (document.getElementById(t.btnId)) return;
+    const el = document.createElement('div');
+    el.className = 'admin-tab';
+    el.id = t.btnId;
+    el.style.display = 'none';
+    el.setAttribute('onclick', "switchTab('"+t.key+"')");
+    el.innerHTML = (t.icon||'') + ' ' + t.label;
+    if (accessBtn) bar.insertBefore(el, accessBtn); else bar.appendChild(el);
+  });
+  const sel = document.getElementById('grantPermsSel');
+  if (sel && sel.getAttribute('data-dyn')!=='1'){
+    sel.setAttribute('data-dyn','1');
+    let html = '<option value="both" selected>All admin tabs</option>';
+    ADMIN_TABS.forEach(t=>{ html += '<option value="'+t.key+'">'+t.emoji+' '+t.label+' only</option>'; });
+    sel.innerHTML = html;
+  }
+}
 function getAdminPermsMap(){
   try{ return JSON.parse(localStorage.getItem('aurumAdminPerms')||'{}'); }catch(e){ return {}; }
 }
@@ -2168,41 +2235,48 @@ async function pushPermsToServer(email, perms){
 }
 // Tabs ki visibility perms ke hisaab se (show hote hi 3D pop-in animation)
 function applyTabPerms(email, isAdmin){
-  const p = getAdminPerms(email);
+  ensureAdminTabButtons();
+  const allowed = permsToSet(getAdminPerms(email));
   const setTab = (el, show) => {
     if (!el) return;
     const was = el.style.display !== 'none';
     el.style.display = show ? 'flex' : 'none';
     if (show && !was){ el.classList.remove('tab-pop'); void el.offsetWidth; el.classList.add('tab-pop'); }
   };
-  const insightsTab = document.getElementById('tab-insights');
-  const fmtTab = document.getElementById('tab-formatting');
-  setTab(insightsTab, isAdmin && (p==='both'||p==='insights'));
-  setTab(fmtTab, isAdmin && (p==='both'||p==='formatting'));
-  // agar user abhi aise tab par khada hai jo ab hidden hai -> dashboard par bhej do
-  const insHidden = insightsTab && insightsTab.style.display==='none' && insightsTab.classList.contains('active');
-  const fmtHidden = fmtTab && fmtTab.style.display==='none' && fmtTab.classList.contains('active');
-  if (insHidden || fmtHidden) switchTab('dashboard');
+  let hiddenActive = false;
+  ADMIN_TABS.forEach(t=>{
+    const el = document.getElementById(t.btnId);
+    const show = isAdmin && allowed.has(t.key);
+    setTab(el, show);
+    // agar user abhi aise tab par khada hai jo ab hidden hai -> dashboard par bhej do
+    if (el && !show && el.classList.contains('active')) hiddenActive = true;
+  });
+  if (hiddenActive) switchTab('dashboard');
 }
 // ── Tab Access UI: chhote access-cards (chips) + tick-box popover ──
 function permChips(p){
   const chip = (t,bg,tx,bd)=>'<span style="background:'+bg+';color:'+tx+';border:1px solid '+bd+';border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap">'+t+'</span>';
-  if (p==='both') return chip('📊 Insights','#e8f1fb','#185FA5','#c7dcf2') + ' ' + chip('✉️ Formatting','#e9f7ee','#1e7e44','#bfe6cd');
-  if (p==='insights') return chip('📊 Insights','#e8f1fb','#185FA5','#c7dcf2');
-  if (p==='formatting') return chip('✉️ Formatting','#e9f7ee','#1e7e44','#bfe6cd');
-  return chip('Dashboard only','#f1f3f8','#6b7a9a','#dbe4f0');
+  const allowed = permsToSet(p);
+  const out = ADMIN_TABS.filter(t=>allowed.has(t.key)).map(t=>{
+    const c = { ...PERM_CHIP_DEFAULT, ...t };
+    return chip(t.emoji+' '+(t.chipLabel||t.label), c.chipBg, c.chipTx, c.chipBd);
+  });
+  return out.length ? out.join(' ') : chip('Dashboard only','#f1f3f8','#6b7a9a','#dbe4f0');
 }
 function permsCellHTML(em, safeEm, locked){
   if (locked) return '<td><span style="font-size:12px;color:#9aa7bd;font-weight:700">👑 All tabs (Locked)</span></td>';
-  const p = getAdminPerms(em);
+  const allowed = permsToSet(getAdminPerms(em));
+  let boxes = '';
+  ADMIN_TABS.forEach(t=>{
+    boxes += '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;font-weight:600;color:#0f2a4a;font-family:\'Calibri\',sans-serif;cursor:pointer"><input type="checkbox" data-perm="'+t.key+'" '+(allowed.has(t.key)?'checked':'')+' onchange="onPermTick(this)"> '+t.emoji+' '+t.label+'</label>';
+  });
   return '<td><div class="perm-cell" data-email="'+safeEm+'" style="position:relative">'
     + '<button type="button" onclick="togglePermPop(this)" '
     + 'style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 9px;background:#f4f6fb;border:1.5px solid #dbe4f0;border-radius:8px;cursor:pointer;font-family:\'Calibri\',sans-serif">'
-    + '<span class="perm-chips" style="display:flex;gap:4px;flex-wrap:wrap">'+permChips(p)+'</span>'
+    + '<span class="perm-chips" style="display:flex;gap:4px;flex-wrap:wrap">'+permChips(getAdminPerms(em))+'</span>'
     + '<span style="font-size:10px;color:#6b7a9a">▼</span></button>'
     + '<div class="perm-pop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:#fff;border:1.5px solid #dbe4f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,42,74,.15);padding:8px 10px;min-width:190px">'
-    +   '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;font-weight:600;color:#0f2a4a;font-family:\'Calibri\',sans-serif;cursor:pointer"><input type="checkbox" data-perm="insights" '+((p==='both'||p==='insights')?'checked':'')+' onchange="onPermTick(this)"> 📊 User Insights</label>'
-    +   '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;font-weight:600;color:#0f2a4a;font-family:\'Calibri\',sans-serif;cursor:pointer"><input type="checkbox" data-perm="formatting" '+((p==='both'||p==='formatting')?'checked':'')+' onchange="onPermTick(this)"> ✉️ Formatting Mail</label>'
+    +   boxes
     + '</div></div></td>';
 }
 function togglePermPop(btn){
@@ -2221,9 +2295,10 @@ function togglePermPop(btn){
 function onPermTick(cb){
   const cell = cb.closest('.perm-cell');
   const email = cell.getAttribute('data-email');
-  const ins = cell.querySelector('input[data-perm="insights"]').checked;
-  const fmt = cell.querySelector('input[data-perm="formatting"]').checked;
-  const p = (ins && fmt) ? 'both' : ins ? 'insights' : fmt ? 'formatting' : 'none';
+  const keys = Array.from(cell.querySelectorAll('input[data-perm]'))
+    .filter(c => c.checked)
+    .map(c => c.getAttribute('data-perm'));
+  const p = keysToPermString(keys);
   setAdminPerms(email, p);
   const chips = cell.querySelector('.perm-chips');
   if (chips) chips.innerHTML = permChips(p);
@@ -2516,25 +2591,27 @@ function logoutUser() {
   window.location.reload();
 }
 
-// Admin: switch tabs
+// Admin: switch tabs (registry-driven — naye tabs automatically handle honge)
 function switchTab(tab) {
   document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
-  document.getElementById('tab-insights').classList.toggle('active', tab==='insights');
-  const tf = document.getElementById('tab-formatting');
-  if (tf) tf.classList.toggle('active', tab==='formatting');
   const ta = document.getElementById('tab-access');
   if (ta) ta.classList.toggle('active', tab==='access');
   document.getElementById('tabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
-  const fp = document.getElementById('tabFormatting');
-  if (fp) fp.style.display = tab==='formatting' ? 'block' : 'none';
-  document.getElementById('tabInsights').style.display = tab==='insights' ? 'block' : 'none';
-  document.getElementById('tabInsights').classList.toggle('show', tab==='insights');
   const ap = document.getElementById('tabAccess');
   if (ap) {
     ap.style.display = tab==='access' ? 'block' : 'none';
     ap.classList.toggle('show', tab==='access');
   }
-  if (tab==='insights') loadInsights();
+  ADMIN_TABS.forEach(t => {
+    const btn = document.getElementById(t.btnId);
+    if (btn) btn.classList.toggle('active', tab===t.key);
+    const sec = document.getElementById(t.sectionId);
+    if (sec) {
+      sec.style.display = tab===t.key ? 'block' : 'none';
+      sec.classList.toggle('show', tab===t.key);
+    }
+    if (tab===t.key && typeof t.onOpen==='function') t.onOpen();
+  });
   if (tab==='access') renderAccessPanel();
 }
 
